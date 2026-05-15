@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<title>Proposta — Imposto & Obra Consultoria</title>
+<style>
+  /* ===== Reset e tipografia ===== */
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    width: 297mm; height: 210mm;
+    background: #ECEDEF;
+    font-family: 'Inter', -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
+    color: #1E1E1E;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  @page { size: A4 landscape; margin: 0; }
+
+  /* ===== Layout principal: grid 3 colunas ===== */
+  .proposta {
+    display: grid;
+    grid-template-columns: 1.05fr 0.95fr 0.95fr;
+    width: 297mm; height: 210mm;
+    background: #ECEDEF;
+  }
+
+  /* ============== COLUNA 1: Info + valores ============== */
+  .col-info {
+    padding: 38px 32px 32px 38px;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+
+  /* Logo block */
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 4px;
+  }
+  .logo-mark {
+    width: 58px; height: 58px;
+    background: #0071E3;
+    border-radius: 8px;
+    position: relative;
+    flex-shrink: 0;
+  }
+  .logo-mark::before, .logo-mark::after {
+    content: ""; position: absolute;
+    background: #fff;
+  }
+  .logo-mark::before {
+    left: 13px; right: 13px;
+    top: 14px; height: 6px;
+    box-shadow:
+      0 12px 0 #fff,
+      0 24px 0 #fff;
+  }
+  .logo-text {
+    display: flex; flex-direction: column;
+    line-height: 0.95;
+  }
+  .logo-text .name {
+    font-size: 26px;
+    font-weight: 800;
+    color: #1E1E1E;
+    letter-spacing: -0.02em;
+  }
+  .logo-text .sub {
+    font-size: 11px;
+    font-weight: 500;
+    color: #1E1E1E;
+    margin-top: 6px;
+    letter-spacing: 0.18em;
+  }
+
+  /* Informações da obra */
+  .info-title {
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    margin-top: 8px;
+    margin-bottom: 6px;
+  }
+  .info-list { font-size: 13.5px; line-height: 1.6; }
+  .info-list .lbl { color: #1E1E1E; font-weight: 500; }
+  .info-list .val { color: #0071E3; font-weight: 600; }
+
+  /* Boxes de valores */
+  .valores {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px 12px;
+    margin-top: 6px;
+    align-items: start;
+  }
+  .box {
+    border-radius: 6px;
+    padding: 14px 16px;
+    color: #fff;
+  }
+  .box-azul {
+    background: #0071E3;
+    grid-row: span 2;
+    display: flex; flex-direction: column; justify-content: center;
+    align-items: center;
+    text-align: center;
+    min-height: 130px;
+  }
+  .box-azul .lbl {
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    margin-bottom: 14px;
+  }
+  .box-azul .val {
+    font-size: 22px;
+    font-weight: 800;
+  }
+  .box-amarelo {
+    background: #FFD439;
+    color: #1E1E1E;
+  }
+  .box-amarelo.principal {
+    text-align: center;
+  }
+  .box-amarelo.principal .lbl {
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    margin-bottom: 10px;
+  }
+  .box-amarelo.principal .val {
+    font-size: 19px;
+    font-weight: 800;
+  }
+  .box-amarelo.multas {
+    text-align: center;
+    padding: 8px 16px;
+  }
+  .box-amarelo.multas span { font-weight: 600; font-size: 12.5px; }
+  .box-amarelo.multas strong { font-weight: 800; font-size: 13px; }
+
+  /* Total */
+  .total-row {
+    display: flex; align-items: baseline; gap: 18px;
+    margin-top: 14px;
+    padding-left: 4px;
+  }
+  .total-row .label {
+    font-size: 24px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+  }
+  .total-row .value {
+    font-size: 32px;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+  }
+  .parcelas {
+    font-size: 12px;
+    margin-top: 2px;
+    margin-left: 110px;
+    color: #1E1E1E;
+  }
+
+  /* Condições */
+  .condicoes {
+    margin-top: 18px;
+    font-size: 11.5px;
+  }
+  .condicoes .titulo {
+    font-weight: 800;
+    margin-bottom: 6px;
+  }
+  .condicoes ul {
+    padding-left: 18px;
+    line-height: 1.55;
+  }
+  .condicoes li::marker { color: #1E1E1E; }
+
+  /* ============== COLUNA 2: Título central ============== */
+  .col-titulo {
+    display: flex; align-items: center; justify-content: center;
+    padding: 38px 0;
+  }
+  .badge-titulo {
+    background: #0071E3;
+    color: #fff;
+    width: 220px; height: 220px;
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    text-align: center;
+    padding: 16px;
+    font-weight: 800;
+    font-size: 36px;
+    line-height: 1.05;
+    letter-spacing: -0.01em;
+  }
+
+  /* ============== COLUNA 3: Painel azul ============== */
+  .col-azul {
+    background: #0071E3;
+    color: #fff;
+    padding: 38px 32px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  .donut-wrap {
+    display: flex; justify-content: center;
+    margin-bottom: 4px;
+  }
+  .donut { width: 195px; height: 195px; display: block; }
+  .donut-label {
+    text-anchor: middle;
+    fill: #fff;
+  }
+  .donut-label.big { font-size: 38px; font-weight: 800; }
+  .donut-label.small { font-size: 11px; font-weight: 500; }
+
+  .col-azul .texto-info {
+    font-size: 12.5px;
+    line-height: 1.55;
+    text-align: center;
+  }
+  .col-azul .destaque {
+    font-size: 13px;
+    line-height: 1.5;
+    font-weight: 800;
+    text-align: center;
+    margin-top: 4px;
+  }
+  .contato {
+    margin-top: auto;
+  }
+  .contato .header {
+    font-size: 22px;
+    font-weight: 800;
+    margin-bottom: 12px;
+    letter-spacing: -0.01em;
+  }
+  .contato-line {
+    display: flex; align-items: center; gap: 9px;
+    font-size: 12px;
+    margin-bottom: 6px;
+  }
+  .contato-line .ico {
+    width: 16px; height: 16px; flex-shrink: 0;
+    background: #fff; color: #0071E3;
+    border-radius: 999px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px; font-weight: 800;
+  }
+  .contato .endereco {
+    font-size: 12px;
+    margin-top: 4px;
+    line-height: 1.4;
+  }
+
+  /* ===== Botão "Imprimir" (não imprime) ===== */
+  .print-btn {
+    position: fixed;
+    bottom: 20px; right: 20px;
+    padding: 12px 22px;
+    background: #006AE0; color: #fff;
+    border: none; border-radius: 999px;
+    font-size: 14px; font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 6px 20px rgba(0,0,0,.18);
+  }
+  @media print {
+    .print-btn { display: none; }
+    body { background: #ECEDEF; }
+  }
+</style>
+</head>
+<body>
+
+<div class="proposta">
+
+  <!-- COLUNA 1 -->
+  <div class="col-info">
+    <div class="logo">
+      <div class="logo-mark"></div>
+      <div class="logo-text">
+        <span class="name">Imposto<br>&amp; Obra</span>
+        <span class="sub">CONSULTORIA</span>
+      </div>
+    </div>
+
+    <div>
+      <div class="info-title">INFORMAÇÕES DA OBRA</div>
+      <div class="info-list">
+        <div><span class="lbl">Responsável:</span> <span class="val" data-field="responsavel">Pessoa física</span></div>
+        <div><span class="lbl">Destinação:</span> <span class="val" data-field="destinacao">Residencial</span></div>
+        <div><span class="lbl">Tipo de Obra:</span> <span class="val" data-field="tipo_obra">Alvenaria</span></div>
+        <div><span class="lbl">Concreto Usinado:</span> <span class="val" data-field="concreto">Sim</span></div>
+        <div><span class="lbl">Área total de construção:</span> <span class="val" data-field="area_constr">100m²</span></div>
+        <div data-field-row="piscina"><span class="lbl">Área de piscina:</span> <span class="val" data-field="area_piscina">100m²</span></div>
+      </div>
+    </div>
+
+    <div class="valores">
+      <div class="box box-azul">
+        <div class="lbl">IMPOSTO CHEIO</div>
+        <div class="val" data-field="imposto_cheio">R$ 10.967,90</div>
+      </div>
+      <div class="box box-amarelo principal">
+        <div class="lbl">IMPOSTO REDUZIDO</div>
+        <div class="val" data-field="imposto_reduzido">R$ 3.537,00</div>
+      </div>
+      <div class="box box-amarelo multas">
+        <span>multas</span> <strong data-field="multas">R$ 537,00</strong>
+      </div>
+    </div>
+
+    <div class="total-row">
+      <span class="label">TOTAL</span>
+      <span class="value" data-field="total">R$ 4.074,00</span>
+    </div>
+    <div class="parcelas" data-field="parcelas">parcelamento em até 5x de R$ 814,18</div>
+
+    <div class="condicoes">
+      <div class="titulo">Condições para o benefício do Imposto Reduzido</div>
+      <ul>
+        <li>Obra de pessoa física</li>
+        <li>Recolhimento contínuo no período da obra</li>
+        <li>Atingir mínimo necessário de 50% a 70% da RMT</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- COLUNA 2 -->
+  <div class="col-titulo">
+    <div class="badge-titulo">CÁLCULO DE INSS DE OBRA</div>
+  </div>
+
+  <!-- COLUNA 3 -->
+  <div class="col-azul">
+    <div class="donut-wrap">
+      <svg class="donut" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+        <!-- Anel cinza claro de fundo -->
+        <circle cx="50" cy="50" r="38" fill="none" stroke="#ffffff" stroke-width="16" />
+        <!-- Anel amarelo (representa a economia) -->
+        <circle id="donut-arc"
+                cx="50" cy="50" r="38" fill="none"
+                stroke="#FFD439" stroke-width="16"
+                stroke-dasharray="160 238"
+                stroke-dashoffset="0"
+                transform="rotate(-90 50 50)" />
+        <text x="50" y="50" class="donut-label big" data-field="economia_pct">67%</text>
+        <text x="50" y="62" class="donut-label small">de economia</text>
+        <text x="50" y="72" class="donut-label small">estimada</text>
+      </svg>
+    </div>
+
+    <p class="texto-info">
+      Para obter o imposto reduzido, você não precisa registrar funcionário na carteira, pois não requer vínculo empregatício.
+    </p>
+
+    <p class="destaque">
+      Te ajudamos a pagar o INSS com o<br>MÁXIMO de redução legal
+    </p>
+
+    <div class="contato">
+      <div class="header">FALE CONOSCO</div>
+      <div class="contato-line"><span class="ico">@</span> <span data-field="email">contato@impostoeobra.com.br</span></div>
+      <div class="contato-line"><span class="ico">W</span> <span data-field="whatsapp_contato">+55 (61) 9 9398-2653</span></div>
+      <div class="endereco" data-field="endereco">Rua Pais Leme 215, Conj. 1713, Pinheiros-SP.</div>
+    </div>
+  </div>
+
+</div>
+
+<button class="print-btn" onclick="window.print()">📥 Salvar como PDF</button>
+
+<script>
+  // Recebe os dados da proposta via hash da URL: #data=base64(JSON)
+  // Ex.: file.html#data=eyJub21lIjoiLi4uIn0=
+  (function () {
+    if (!location.hash || !location.hash.startsWith('#data=')) return;
+
+    try {
+      var raw = decodeURIComponent(location.hash.substring(6));
+      var data;
+      try { data = JSON.parse(raw); }
+      catch (_) { data = JSON.parse(decodeURIComponent(escape(atob(raw)))); }
+
+      Object.keys(data).forEach(function (k) {
+        document.querySelectorAll('[data-field="' + k + '"]').forEach(function (el) {
+          el.textContent = data[k];
+        });
+      });
+
+      // Esconder linha de piscina se não houver piscina
+      if (data.area_piscina === "0m²" || data.area_piscina === "" || data.area_piscina == null) {
+        var row = document.querySelector('[data-field-row="piscina"]');
+        if (row) row.style.display = 'none';
+      }
+
+      // Ajustar o arco do donut conforme a % economia
+      if (data.economia_pct != null) {
+        var pct = parseFloat(String(data.economia_pct).replace('%','').replace(',','.'));
+        if (!isNaN(pct)) {
+          // perímetro do círculo r=38 → 2πr ≈ 238.76
+          var total = 238.76;
+          var fill = total * pct / 100;
+          var arc = document.getElementById('donut-arc');
+          if (arc) arc.setAttribute('stroke-dasharray', fill + ' ' + (total - fill));
+        }
+      }
+
+      // Auto-imprimir se #print=1 na URL
+      if (location.hash.indexOf('print=1') !== -1) {
+        setTimeout(function () { window.print(); }, 350);
+      }
+    } catch (e) {
+      console.error('Erro ao parsear dados da proposta:', e);
+    }
+  })();
+</script>
+
+</body>
+</html>
