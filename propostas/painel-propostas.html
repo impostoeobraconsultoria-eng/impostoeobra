@@ -205,15 +205,15 @@ body.modo-proposta #print-controls { display: flex; }
 .p-info-list .lbl { font-weight: 500; }
 .p-info-list .val { color: #0071E3; font-weight: 600; }
 .p-valores { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 12px; margin-top: 6px; align-items: start; }
-.p-box { border-radius: 6px; padding: 14px 16px; color: #fff; }
-.p-box-azul { background: #0071E3; grid-row: span 2; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; min-height: 130px; }
-.p-box-azul .lbl { font-size: 13px; font-weight: 700; letter-spacing: 0.04em; margin-bottom: 14px; }
-.p-box-azul .val { font-size: 22px; font-weight: 800; }
+.p-box { border-radius: 6px; padding: 18px 16px; color: #fff; }
+.p-box-azul { background: #0071E3; grid-row: span 2; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; min-height: 170px; padding: 24px 16px; }
+.p-box-azul .lbl { font-size: 13px; font-weight: 700; letter-spacing: 0.04em; margin-bottom: 18px; }
+.p-box-azul .val { font-size: 26px; font-weight: 800; letter-spacing: -0.01em; }
 .p-box-amarelo { background: #FFD439; color: #1E1E1E; }
-.p-box-amarelo.principal { text-align: center; }
+.p-box-amarelo.principal { text-align: center; min-height: 96px; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 16px; }
 .p-box-amarelo.principal .lbl { font-size: 13px; font-weight: 700; letter-spacing: 0.04em; margin-bottom: 10px; }
-.p-box-amarelo.principal .val { font-size: 19px; font-weight: 800; }
-.p-box-amarelo.multas { text-align: center; padding: 8px 16px; }
+.p-box-amarelo.principal .val { font-size: 22px; font-weight: 800; }
+.p-box-amarelo.multas { text-align: center; padding: 10px 16px; min-height: 52px; display: flex; align-items: center; justify-content: center; gap: 8px; }
 .p-box-amarelo.multas span { font-weight: 600; font-size: 12.5px; }
 .p-box-amarelo.multas strong { font-weight: 800; font-size: 13px; }
 .p-total-row { display: flex; align-items: baseline; gap: 18px; margin-top: 14px; padding-left: 4px; }
@@ -245,8 +245,11 @@ body.modo-proposta #print-controls { display: flex; }
 <!-- ============================== HEADER ============================== -->
 <header>
   <div class="brand">
-    <div class="mark">I&amp;O</div>
-    <div>Painel de Propostas</div>
+    <img id="brandLogo" alt="Imposto & Obra" style="height:44px;width:auto;" />
+    <div style="line-height:1.1;">
+      <div style="font-size:11px;font-weight:600;color:#64748b;letter-spacing:.04em;text-transform:uppercase;">Painel de Propostas</div>
+      <a id="lnkSite" href="#" target="_blank" rel="noopener" style="font-size:12px;color:#006AE0;font-weight:600;text-decoration:none;">↩ Voltar ao site</a>
+    </div>
   </div>
   <div class="tools">
     <span class="live" id="liveBadge"><span class="dot"></span> <span id="liveTxt">conectando…</span></span>
@@ -269,6 +272,15 @@ body.modo-proposta #print-controls { display: flex; }
 
     <label style="margin-top:14px;">Nome da aba (ignorado se a URL já tem gid)</label>
     <input type="text" id="cfgSheetName" placeholder="Leads" value="Leads" />
+
+    <label style="margin-top:14px;">URL do site (botão "Voltar ao site")</label>
+    <input type="text" id="cfgUrlSite" placeholder="https://seu-usuario.github.io/impostoeobra/" />
+
+    <label style="margin-top:14px;">Mensagem padrão de WhatsApp</label>
+    <textarea id="cfgMsgWhats" rows="5" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:4px;font:inherit;font-size:13px;resize:vertical;">Olá {nome}! Sou consultor da Imposto & Obra Consultoria. Vi sua simulação de INSS da obra e preparei uma proposta personalizada. Posso te enviar?</textarea>
+    <small>
+      Variáveis disponíveis: <code>{nome}</code>, <code>{imposto_cheio}</code>, <code>{imposto_reduzido}</code>, <code>{economia}</code>, <code>{total}</code>, <code>{uf}</code>, <code>{destinacao}</code>, <code>{area}</code>
+    </small>
 
     <div style="margin-top:14px;">
       <button class="btn" id="btnSalvarConfig">Salvar e carregar</button>
@@ -293,7 +305,17 @@ body.modo-proposta #print-controls { display: flex; }
         <label>Lead selecionado</label>
         <input type="text" id="fNome" readonly />
       </div>
-      <div></div>
+      <div>
+        <label>Telefone do cliente</label>
+        <div style="display:flex;gap:6px;">
+          <input type="text" id="fTel" readonly style="flex:1;" />
+          <a id="lnkTopWhats" href="#" target="_blank" rel="noopener" title="Abrir WhatsApp do cliente"
+             style="display:inline-flex;align-items:center;justify-content:center;padding:9px 12px;background:#25D366;color:#fff;border-radius:5px;text-decoration:none;font-weight:700;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="margin-right:4px;"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413z"/></svg>
+            WhatsApp
+          </a>
+        </div>
+      </div>
       <div>
         <label>Multas (R$)</label>
         <input type="number" id="fMultas" min="0" step="0.01" value="0" />
@@ -312,8 +334,9 @@ body.modo-proposta #print-controls { display: flex; }
       <div id="pParc">—</div>
     </div>
 
-    <div style="margin-top:14px; display:flex; gap:8px;">
+    <div style="margin-top:14px; display:flex; gap:8px; flex-wrap:wrap;">
       <button class="btn success" id="btnGerar">Gerar proposta</button>
+      <a class="btn" id="btnWhats" href="#" target="_blank" rel="noopener" style="background:#25D366;">📱 Abrir WhatsApp</a>
       <button class="btn ghost" id="btnLimpar">Limpar</button>
     </div>
   </div>
@@ -323,8 +346,8 @@ body.modo-proposta #print-controls { display: flex; }
 <div id="proposta">
   <div class="p-col-info">
     <div class="p-logo">
-      <div class="p-logo-mark"></div>
-      <div class="p-logo-text">
+      <img id="propLogo" alt="Imposto & Obra Consultoria" style="height:64px;width:auto;display:block;" />
+      <div class="p-logo-text" style="display:none;">
         <span class="name">Imposto<br>&amp; Obra</span>
         <span class="sub">CONSULTORIA</span>
       </div>
@@ -373,12 +396,18 @@ body.modo-proposta #print-controls { display: flex; }
   <div class="p-col-azul">
     <div class="p-donut-wrap">
       <svg class="p-donut" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-        <circle cx="50" cy="50" r="38" fill="none" stroke="#ffffff" stroke-width="16" />
-        <circle id="donutArc" cx="50" cy="50" r="38" fill="none" stroke="#FFD439" stroke-width="16"
-                stroke-dasharray="160 78" stroke-dashoffset="0" transform="rotate(-90 50 50)" />
-        <text x="50" y="50" class="p-donut-label big" data-f="economia_pct">0%</text>
-        <text x="50" y="62" class="p-donut-label small">de economia</text>
-        <text x="50" y="72" class="p-donut-label small">estimada</text>
+        <!-- Miolo: azul mais escuro pra garantir contraste mesmo em prints -->
+        <circle cx="50" cy="50" r="30" fill="#0071E3" />
+        <!-- Anel branco translúcido (parte vazia do progresso) -->
+        <circle cx="50" cy="50" r="38" fill="none" stroke="rgba(255,255,255,0.45)" stroke-width="14" />
+        <!-- Arco amarelo (parte preenchida) -->
+        <circle id="donutArc" cx="50" cy="50" r="38" fill="none" stroke="#FFD439" stroke-width="14"
+                stroke-dasharray="160 78" stroke-dashoffset="0" transform="rotate(-90 50 50)" stroke-linecap="round" />
+        <!-- Textos centralizados -->
+        <text x="50" y="48" text-anchor="middle" dominant-baseline="middle"
+              font-size="20" font-weight="800" fill="#ffffff" data-f="economia_pct">0%</text>
+        <text x="50" y="62" text-anchor="middle" font-size="6" font-weight="600" fill="#ffffff">de economia</text>
+        <text x="50" y="70" text-anchor="middle" font-size="6" font-weight="600" fill="#ffffff">estimada</text>
       </svg>
     </div>
     <p class="p-texto-info">
@@ -412,11 +441,57 @@ var CONFIG_CONTATO = {
   endereco: "Rua Pais Leme 215, Conj. 1713, Pinheiros-SP."
 };
 
+// Logo Imposto & Obra Consultoria embutida (JPEG q85, ~11KB base64)
+var LOGO_DATA_URL = "data:image/jpeg;base64,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";
+
+// Mensagem padrão de WhatsApp (sobrescrita pela config)
+var MSG_WHATS_DEFAULT = "Olá {nome}! Sou consultor da Imposto & Obra Consultoria. Vi sua simulação de INSS da obra e preparei uma proposta personalizada. Posso te enviar?";
+
 function getConfig() {
   try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}"); }
   catch (_) { return {}; }
 }
 function setConfig(cfg) { localStorage.setItem(STORAGE_KEY, JSON.stringify(cfg)); }
+
+// ============================================================
+// Helpers de telefone e WhatsApp
+// ============================================================
+function digitosPhone(v) { return String(v == null ? "" : v).replace(/\D/g, ""); }
+
+function fmtTelefone(ddd, whats) {
+  var d = digitosPhone(ddd);
+  var w = digitosPhone(whats);
+  if (!d && !w) return "";
+  if (w.length === 9) return "(" + d + ") " + w.substring(0,5) + "-" + w.substring(5);
+  if (w.length === 8) return "(" + d + ") " + w.substring(0,4) + "-" + w.substring(4);
+  return "(" + d + ") " + w;
+}
+
+function urlWhatsApp(ddd, whats, msg) {
+  var d = digitosPhone(ddd);
+  var w = digitosPhone(whats);
+  if (!d || !w) return "#";
+  var num = "55" + d + w;
+  return "https://wa.me/" + num + (msg ? "?text=" + encodeURIComponent(msg) : "");
+}
+
+function montarMensagem(template, lead, calc) {
+  var cheio = parseFloat(lead.inss_direto) || 0;
+  var red   = parseFloat(lead.inss_reduzido) || 0;
+  var vars = {
+    "{nome}": (lead.nome || "").split(" ")[0] || "",
+    "{imposto_cheio}": fmtBRL(cheio),
+    "{imposto_reduzido}": fmtBRL(red),
+    "{economia}": fmtBRL(Math.max(0, cheio - red)),
+    "{total}": calc ? fmtBRL(calc.total) : fmtBRL(red),
+    "{uf}": lead.uf || "",
+    "{destinacao}": lead.dest || "",
+    "{area}": fmtArea(lead.a_construcao),
+  };
+  var out = template || "";
+  Object.keys(vars).forEach(function (k) { out = out.split(k).join(vars[k]); });
+  return out;
+}
 
 // ============================================================
 // Helpers
@@ -625,9 +700,12 @@ function renderLista() {
     return;
   }
 
+  var cfg = getConfig();
+  var msgTpl = cfg.msgWhats || MSG_WHATS_DEFAULT;
+
   var html = '<div class="lead-table">' +
     '<div class="lead-row header">' +
-      '<div>Nome</div><div>Detalhes</div><div>Imp. cheio</div><div>Reduzido</div><div>Data</div>' +
+      '<div>Nome / Contato</div><div>Detalhes</div><div>Imp. cheio</div><div>Reduzido</div><div>Data</div>' +
     '</div>';
 
   leads.forEach(function (l) {
@@ -636,166 +714,10 @@ function renderLista() {
     var red    = fmtBRL(l.inss_reduzido);
     var data   = String(l.data_hora || "").substring(0, 16);
     var sel = leadSelecionado && leadSelecionado.rowIndex === l.rowIndex ? ' selected' : '';
-    html += '<div class="lead-row' + sel + '" data-row="' + l.rowIndex + '">' +
-      '<div class="nome">' + escapeHtml(l.nome || "(sem nome)") + '</div>' +
-      '<div class="resumo">' + escapeHtml(resumo) + '</div>' +
-      '<div class="valor">' + cheio + '</div>' +
-      '<div class="valor">' + red + '</div>' +
-      '<div class="data">' + escapeHtml(data) + '</div>' +
-    '</div>';
-  });
-  html += '</div>';
-  list.innerHTML = html;
-
-  list.querySelectorAll('.lead-row[data-row]').forEach(function (item) {
-    item.addEventListener('click', function () { selecionar(item); });
-  });
-}
-
-function selecionar(itemEl) {
-  document.querySelectorAll('.lead-row[data-row]').forEach(function (i) { i.classList.remove('selected'); });
-  itemEl.classList.add('selected');
-  var rowIndex = parseInt(itemEl.dataset.row, 10);
-  leadSelecionado = leadsCarregados.find(function (l) { return l.rowIndex === rowIndex; });
-  document.getElementById('formCard').style.display = 'block';
-  document.getElementById('fNome').value = leadSelecionado.nome || "";
-  atualizarPreview();
-  document.getElementById('formCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
-}
-
-function atualizarPreview() {
-  if (!leadSelecionado) return;
-  var cheio = parseFloat(leadSelecionado.inss_direto) || 0;
-  var red   = parseFloat(leadSelecionado.inss_reduzido) || 0;
-  var mult  = parseFloat(document.getElementById('fMultas').value) || 0;
-  var parc  = parseInt(document.getElementById('fParcelas').value, 10) || 1;
-  var total = red + mult;
-  var econ  = cheio > 0 ? Math.round(((cheio - red) / cheio) * 100) : 0;
-
-  document.getElementById('pCheio').textContent = fmtBRL(cheio);
-  document.getElementById('pRed').textContent   = fmtBRL(red);
-  document.getElementById('pEcon').textContent  = econ + "%";
-  document.getElementById('pTotal').textContent = "TOTAL: " + fmtBRL(total);
-  document.getElementById('pParc').textContent  = parc > 1
-    ? parc + "x de " + fmtBRL(total / parc)
-    : "à vista";
-}
-
-// ============================================================
-// Geração da proposta (renderiza na mesma página)
-// ============================================================
-function gerarProposta() {
-  if (!leadSelecionado) return;
-
-  var l = leadSelecionado;
-  var cheio = parseFloat(l.inss_direto) || 0;
-  var red   = parseFloat(l.inss_reduzido) || 0;
-  var mult  = parseFloat(document.getElementById('fMultas').value) || 0;
-  var parc  = parseInt(document.getElementById('fParcelas').value, 10) || 1;
-  var total = red + mult;
-  var econ  = cheio > 0 ? Math.round(((cheio - red) / cheio) * 100) : 0;
-  var piscina = (parseFloat(l.a_pcoberta) || 0) + (parseFloat(l.a_pdescoberta) || 0);
-
-  var destinacao = String(l.dest || "");
-  if (destinacao.indexOf("Residencial") === 0) destinacao = "Residencial";
-  if (destinacao.indexOf("Comercial")   === 0) destinacao = "Comercial";
-  if (destinacao.indexOf("Galp")        === 0) destinacao = "Galpão Industrial";
-
-  var dados = {
-    responsavel:      l.resp || "—",
-    destinacao:       destinacao,
-    tipo_obra:        l.tipo || "—",
-    concreto:         l.concreto || "—",
-    area_constr:      fmtArea(l.a_construcao),
-    area_piscina:     fmtArea(piscina),
-    imposto_cheio:    fmtBRL(cheio),
-    imposto_reduzido: fmtBRL(red),
-    multas:           fmtBRL(mult),
-    total:            fmtBRL(total),
-    parcelas:         parc > 1
-                      ? "parcelamento em até " + parc + "x de " + fmtBRL(total / parc)
-                      : "pagamento à vista",
-    economia_pct:     econ + "%",
-    email:            CONFIG_CONTATO.email,
-    whatsapp_contato: CONFIG_CONTATO.whatsapp,
-    endereco:         CONFIG_CONTATO.endereco,
-  };
-
-  Object.keys(dados).forEach(function (k) {
-    document.querySelectorAll('[data-f="' + k + '"]').forEach(function (el) {
-      el.textContent = dados[k];
-    });
-  });
-
-  // Esconde linha de piscina se não houver
-  var rowPiscina = document.querySelector('[data-row="piscina"]');
-  if (rowPiscina) {
-    rowPiscina.style.display = (piscina > 0) ? '' : 'none';
-  }
-
-  // Atualiza o arco do donut conforme % economia
-  var perimetro = 238.76; // 2*PI*38
-  var fill = perimetro * econ / 100;
-  document.getElementById('donutArc').setAttribute(
-    'stroke-dasharray', fill + ' ' + (perimetro - fill));
-
-  document.body.classList.add('modo-proposta');
-  window.scrollTo(0, 0);
-
-  // Aguardar render e abrir o diálogo de impressão
-  setTimeout(function () { window.print(); }, 400);
-}
-
-function voltar() {
-  document.body.classList.remove('modo-proposta');
-  window.scrollTo(0, 0);
-}
-
-// ============================================================
-// Event handlers
-// ============================================================
-document.getElementById('fMultas').addEventListener('input', atualizarPreview);
-document.getElementById('fParcelas').addEventListener('input', atualizarPreview);
-document.getElementById('busca').addEventListener('input', renderLista);
-document.getElementById('btnGerar').addEventListener('click', gerarProposta);
-document.getElementById('btnLimpar').addEventListener('click', function () {
-  leadSelecionado = null;
-  document.getElementById('formCard').style.display = 'none';
-  document.querySelectorAll('.lead-row[data-row]').forEach(function (i) { i.classList.remove('selected'); });
-});
-document.getElementById('btnReload').addEventListener('click', function () { recarregar(false); });
-document.getElementById('btnConfig').addEventListener('click', function () {
-  var box = document.getElementById('configBox');
-  box.style.display = box.style.display === 'none' ? 'block' : 'none';
-  var cfg = getConfig();
-  document.getElementById('cfgSheetId').value = cfg.sheetId || "";
-  document.getElementById('cfgSheetName').value = cfg.sheetName || "Leads";
-});
-document.getElementById('btnSalvarConfig').addEventListener('click', function () {
-  var cfg = {
-    sheetId:   document.getElementById('cfgSheetId').value.trim(),
-    sheetName: document.getElementById('cfgSheetName').value.trim() || "Leads",
-  };
-  if (!cfg.sheetId) { alert("Cole a URL ou o ID da planilha."); return; }
-  setConfig(cfg);
-  document.getElementById('configBox').style.display = 'none';
-  recarregar(false);
-});
-
-// Polling a cada 8s + refresh ao focar
-setInterval(function () { recarregar(true); }, 8000);
-window.addEventListener('focus', function () { recarregar(true); });
-
-// Init
-setLive('on', 'iniciando…');
-var cfgInicial = getConfig();
-if (!cfgInicial.sheetId) {
-  document.getElementById('configBox').style.display = 'block';
-  document.getElementById('leadsList').innerHTML =
-    '<div class="empty">Configure a URL da planilha publicada (botão ⚙ Configurar) pra começar.</div>';
-} else {
-  recarregar(false);
-}
-</script>
-</body>
-</html>
+    var tel = fmtTelefone(l.ddd, l.whatsapp);
+    var waUrl = urlWhatsApp(l.ddd, l.whatsapp, montarMensagem(msgTpl, l));
+    var waBtn = (tel && waUrl !== "#")
+      ? '<a href="' + waUrl + '" target="_blank" rel="noopener" title="Abrir WhatsApp" ' +
+        'onclick="event.stopPropagation();" ' +
+        'style="display:inline-flex;align-items:center;gap:4px;padding:2px 6px;background:#25D366;color:#fff;border-radius:4px;text-decoration:none;font-size:11px;font-weight:700;margin-left:6px;">' +
+        '<svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413
