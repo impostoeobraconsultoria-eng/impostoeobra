@@ -1,0 +1,801 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Painel de Propostas - Imposto & Obra</title>
+<style>
+/* ============================================================
+   PAINEL DE PROPOSTAS - Standalone (1 arquivo)
+   ============================================================ */
+
+:root {
+  --primary: #0071E3;
+  --action:  #006AE0;
+  --yellow:  #FFD439;
+  --bg:      #ECEDEF;
+  --text:    #1E1E1E;
+  --muted:   #64748b;
+  --border:  #e5e7eb;
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0; padding: 0;
+  font-family: 'Inter', -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
+  color: var(--text);
+  background: #f8fafc;
+  font-size: 14px;
+}
+
+/* ============================== HEADER ============================== */
+header {
+  background: #fff;
+  border-bottom: 1px solid var(--border);
+  padding: 14px 24px;
+  display: flex; align-items: center; justify-content: space-between;
+  flex-wrap: wrap; gap: 12px;
+}
+.brand {
+  display: flex; align-items: center; gap: 12px;
+  font-weight: 800; font-size: 18px;
+}
+.brand .mark {
+  width: 36px; height: 36px;
+  background: var(--primary);
+  border-radius: 6px;
+  display: grid; place-items: center;
+  color: #fff; font-size: 14px;
+}
+.tools { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.btn {
+  padding: 8px 14px;
+  border: none; cursor: pointer;
+  border-radius: 6px;
+  font: inherit; font-size: 13px; font-weight: 600;
+  background: var(--action); color: #fff;
+}
+.btn:hover { filter: brightness(1.08); }
+.btn.ghost { background: #e5e7eb; color: var(--text); }
+.btn.success { background: #0a8d4d; }
+.btn:disabled { opacity: .5; cursor: not-allowed; }
+.live { font-size: 12px; color: var(--muted); display: inline-flex; align-items: center; gap: 6px; }
+.live .dot { width: 8px; height: 8px; border-radius: 999px; background: #16a34a; animation: pulse 1.6s infinite; }
+.live.off .dot { background: #ef4444; animation: none; }
+@keyframes pulse { 0%,100%{opacity:.4} 50%{opacity:1} }
+
+/* ============================== CONFIG ============================== */
+.config-box {
+  margin: 24px auto 0; max-width: 980px; padding: 0 24px;
+}
+.config-card {
+  background: #fff; border: 1px solid var(--border);
+  border-radius: 8px; padding: 16px 18px;
+  margin-bottom: 16px;
+}
+.config-card label { font-weight: 600; font-size: 12px; display: block; margin-bottom: 4px; }
+.config-card input {
+  width: 100%; padding: 8px 10px;
+  border: 1px solid var(--border); border-radius: 4px;
+  font: inherit; font-size: 13px;
+  font-family: ui-monospace, monospace;
+}
+.config-card small { color: var(--muted); display: block; margin-top: 4px; font-size: 11px; }
+
+/* ============================== LISTA DE LEADS ============================== */
+main {
+  max-width: 1000px; margin: 24px auto; padding: 0 24px;
+}
+.search-row {
+  display: flex; gap: 10px; align-items: center; margin-bottom: 12px; flex-wrap: wrap;
+}
+.search-row input {
+  flex: 1; min-width: 200px;
+  padding: 9px 12px;
+  border: 1px solid var(--border); border-radius: 6px;
+  font: inherit; font-size: 13px;
+}
+.lead-table {
+  background: #fff; border: 1px solid var(--border); border-radius: 8px; overflow: hidden;
+}
+.lead-row {
+  padding: 12px 16px;
+  border-bottom: 1px solid #f1f5f9;
+  cursor: pointer;
+  display: grid;
+  grid-template-columns: 1.5fr 2fr 1fr 1fr 0.7fr;
+  gap: 16px;
+  align-items: center;
+}
+.lead-row:last-child { border-bottom: none; }
+.lead-row:hover { background: #f8fafc; }
+.lead-row.selected { background: rgba(0,113,227,.08); border-left: 3px solid var(--primary); padding-left: 13px; }
+.lead-row.header {
+  background: #f8fafc;
+  font-size: 11px; font-weight: 700;
+  letter-spacing: .04em; color: var(--muted);
+  text-transform: uppercase;
+  cursor: default;
+}
+.lead-row.header:hover { background: #f8fafc; }
+.lead-row .nome { font-weight: 700; font-size: 14px; }
+.lead-row .resumo { font-size: 12px; color: var(--muted); }
+.lead-row .valor { font-size: 13px; font-weight: 700; color: var(--primary); text-align: right; }
+.lead-row .data { font-size: 11px; color: var(--muted); }
+.lead-row.new { background: #fef9c3; animation: hl 3s ease-out; }
+@keyframes hl { from{background:#fde047} to{background:transparent} }
+
+.empty, .errbox {
+  text-align: center; padding: 36px 18px; color: var(--muted);
+}
+.errbox {
+  background: #fee2e2; color: #991b1b; border-radius: 8px; margin: 20px 0;
+  font-family: ui-monospace, monospace; font-size: 12px;
+  white-space: pre-wrap; text-align: left;
+}
+
+/* ============================== FORM DA PROPOSTA ============================== */
+.form-card {
+  margin-top: 18px;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 18px;
+}
+.form-card h3 { margin: 0 0 14px; font-size: 16px; }
+.form-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+}
+.form-grid label { font-size: 12px; font-weight: 600; margin-bottom: 4px; display: block; }
+.form-grid input {
+  width: 100%; padding: 9px 11px;
+  border: 1px solid var(--border); border-radius: 5px;
+  font: inherit; font-size: 13px;
+}
+.preview {
+  background: #f8fafc;
+  border: 1px dashed var(--border);
+  border-radius: 6px;
+  padding: 12px 14px;
+  margin-top: 12px;
+  font-size: 13px;
+}
+.preview div { margin: 3px 0; }
+.preview .total { font-weight: 800; color: var(--primary); margin-top: 8px; font-size: 15px; }
+
+/* ============================== PROPOSTA RENDERIZADA ============================== */
+#proposta {
+  display: none;
+  width: 297mm; height: 210mm;
+  background: var(--bg);
+  margin: 24px auto;
+  box-shadow: 0 10px 40px rgba(0,0,0,.15);
+}
+body.modo-proposta header { display: none; }
+body.modo-proposta main { display: none; }
+body.modo-proposta .config-box { display: none; }
+body.modo-proposta #proposta { display: grid; }
+body.modo-proposta { background: #cbd5e1; }
+body.modo-proposta #print-controls { display: flex; }
+
+#print-controls {
+  display: none;
+  position: fixed; bottom: 20px; right: 20px;
+  gap: 10px;
+}
+
+@media print {
+  body { background: #ECEDEF !important; }
+  body.modo-proposta #proposta { box-shadow: none; margin: 0; }
+  #print-controls, header, main, .config-box { display: none !important; }
+  @page { size: A4 landscape; margin: 0; }
+}
+
+/* Layout interno da proposta (copiado do proposta-template.html) */
+#proposta { display: grid; grid-template-columns: 1.05fr 0.95fr 0.95fr; }
+.p-col-info { padding: 38px 32px 32px 38px; display: flex; flex-direction: column; gap: 18px; }
+.p-logo { display: flex; align-items: center; gap: 12px; margin-bottom: 4px; }
+.p-logo-mark { width: 58px; height: 58px; background: #0071E3; border-radius: 8px; position: relative; flex-shrink: 0; }
+.p-logo-mark::before { content: ""; position: absolute; left: 13px; right: 13px; top: 14px; height: 6px; background: #fff; box-shadow: 0 12px 0 #fff, 0 24px 0 #fff; }
+.p-logo-text { display: flex; flex-direction: column; line-height: 0.95; }
+.p-logo-text .name { font-size: 26px; font-weight: 800; letter-spacing: -0.02em; }
+.p-logo-text .sub { font-size: 11px; font-weight: 500; margin-top: 6px; letter-spacing: 0.18em; }
+.p-info-title { font-size: 13px; font-weight: 800; letter-spacing: 0.06em; margin-top: 8px; margin-bottom: 6px; }
+.p-info-list { font-size: 13.5px; line-height: 1.6; }
+.p-info-list .lbl { font-weight: 500; }
+.p-info-list .val { color: #0071E3; font-weight: 600; }
+.p-valores { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 12px; margin-top: 6px; align-items: start; }
+.p-box { border-radius: 6px; padding: 14px 16px; color: #fff; }
+.p-box-azul { background: #0071E3; grid-row: span 2; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; min-height: 130px; }
+.p-box-azul .lbl { font-size: 13px; font-weight: 700; letter-spacing: 0.04em; margin-bottom: 14px; }
+.p-box-azul .val { font-size: 22px; font-weight: 800; }
+.p-box-amarelo { background: #FFD439; color: #1E1E1E; }
+.p-box-amarelo.principal { text-align: center; }
+.p-box-amarelo.principal .lbl { font-size: 13px; font-weight: 700; letter-spacing: 0.04em; margin-bottom: 10px; }
+.p-box-amarelo.principal .val { font-size: 19px; font-weight: 800; }
+.p-box-amarelo.multas { text-align: center; padding: 8px 16px; }
+.p-box-amarelo.multas span { font-weight: 600; font-size: 12.5px; }
+.p-box-amarelo.multas strong { font-weight: 800; font-size: 13px; }
+.p-total-row { display: flex; align-items: baseline; gap: 18px; margin-top: 14px; padding-left: 4px; }
+.p-total-row .label { font-size: 24px; font-weight: 600; letter-spacing: 0.04em; }
+.p-total-row .value { font-size: 32px; font-weight: 800; letter-spacing: -0.01em; }
+.p-parcelas { font-size: 12px; margin-top: 2px; margin-left: 110px; }
+.p-condicoes { margin-top: 18px; font-size: 11.5px; }
+.p-condicoes .titulo { font-weight: 800; margin-bottom: 6px; }
+.p-condicoes ul { padding-left: 18px; line-height: 1.55; }
+.p-col-titulo { display: flex; align-items: center; justify-content: center; padding: 38px 0; }
+.p-badge-titulo { background: #0071E3; color: #fff; width: 220px; height: 220px; border-radius: 12px; display: flex; align-items: center; justify-content: center; text-align: center; padding: 16px; font-weight: 800; font-size: 36px; line-height: 1.05; }
+.p-col-azul { background: #0071E3; color: #fff; padding: 38px 32px; display: flex; flex-direction: column; gap: 16px; }
+.p-donut-wrap { display: flex; justify-content: center; margin-bottom: 4px; }
+.p-donut { width: 195px; height: 195px; }
+.p-donut-label { text-anchor: middle; fill: #fff; }
+.p-donut-label.big { font-size: 38px; font-weight: 800; }
+.p-donut-label.small { font-size: 11px; font-weight: 500; }
+.p-texto-info { font-size: 12.5px; line-height: 1.55; text-align: center; }
+.p-destaque { font-size: 13px; line-height: 1.5; font-weight: 800; text-align: center; margin-top: 4px; }
+.p-contato { margin-top: auto; }
+.p-contato .header { font-size: 22px; font-weight: 800; margin-bottom: 12px; letter-spacing: -0.01em; }
+.p-contato-line { display: flex; align-items: center; gap: 9px; font-size: 12px; margin-bottom: 6px; }
+.p-contato-line .ico { width: 16px; height: 16px; flex-shrink: 0; background: #fff; color: #0071E3; border-radius: 999px; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 800; }
+.p-endereco { font-size: 12px; margin-top: 4px; line-height: 1.4; }
+</style>
+</head>
+<body>
+
+<!-- ============================== HEADER ============================== -->
+<header>
+  <div class="brand">
+    <div class="mark">I&amp;O</div>
+    <div>Painel de Propostas</div>
+  </div>
+  <div class="tools">
+    <span class="live" id="liveBadge"><span class="dot"></span> <span id="liveTxt">conectando…</span></span>
+    <button class="btn ghost" id="btnReload">Atualizar agora</button>
+    <button class="btn ghost" id="btnConfig">⚙ Configurar</button>
+  </div>
+</header>
+
+<!-- ============================== CONFIG (oculto por padrão) ============================== -->
+<div class="config-box" id="configBox" style="display:none;">
+  <div class="config-card">
+    <label>URL da planilha (publicada na web) ou ID</label>
+    <input type="text" id="cfgSheetId" placeholder="Cole a URL completa que o Google te deu, ou apenas o ID" />
+    <small>
+      <b>Funciona com qualquer uma destas formas:</b><br>
+      • URL de publicação na web (Arquivo → Compartilhar → Publicar na web): <code>https://docs.google.com/spreadsheets/d/e/2PACX-.../pubhtml?gid=...</code><br>
+      • URL normal da planilha: <code>https://docs.google.com/spreadsheets/d/<b>ID</b>/edit</code><br>
+      • Apenas o ID puro (entre <code>/d/</code> e <code>/edit</code>)
+    </small>
+
+    <label style="margin-top:14px;">Nome da aba (ignorado se a URL já tem gid)</label>
+    <input type="text" id="cfgSheetName" placeholder="Leads" value="Leads" />
+
+    <div style="margin-top:14px;">
+      <button class="btn" id="btnSalvarConfig">Salvar e carregar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================== MAIN ============================== -->
+<main>
+  <div class="search-row">
+    <input type="text" id="busca" placeholder="Buscar por nome, UF, destinação..." />
+  </div>
+
+  <div id="leadsList">
+    <div class="empty">Carregando…</div>
+  </div>
+
+  <div class="form-card" id="formCard" style="display:none;">
+    <h3>Dados da proposta</h3>
+    <div class="form-grid">
+      <div>
+        <label>Lead selecionado</label>
+        <input type="text" id="fNome" readonly />
+      </div>
+      <div></div>
+      <div>
+        <label>Multas (R$)</label>
+        <input type="number" id="fMultas" min="0" step="0.01" value="0" />
+      </div>
+      <div>
+        <label>Parcelas</label>
+        <input type="number" id="fParcelas" min="1" max="24" value="5" />
+      </div>
+    </div>
+
+    <div class="preview" id="preview">
+      <div>Imposto cheio: <span id="pCheio">—</span></div>
+      <div>Imposto reduzido: <span id="pRed">—</span></div>
+      <div>Economia estimada: <span id="pEcon">—</span></div>
+      <div class="total" id="pTotal">TOTAL: —</div>
+      <div id="pParc">—</div>
+    </div>
+
+    <div style="margin-top:14px; display:flex; gap:8px;">
+      <button class="btn success" id="btnGerar">Gerar proposta</button>
+      <button class="btn ghost" id="btnLimpar">Limpar</button>
+    </div>
+  </div>
+</main>
+
+<!-- ============================== PROPOSTA (oculta até gerar) ============================== -->
+<div id="proposta">
+  <div class="p-col-info">
+    <div class="p-logo">
+      <div class="p-logo-mark"></div>
+      <div class="p-logo-text">
+        <span class="name">Imposto<br>&amp; Obra</span>
+        <span class="sub">CONSULTORIA</span>
+      </div>
+    </div>
+    <div>
+      <div class="p-info-title">INFORMAÇÕES DA OBRA</div>
+      <div class="p-info-list">
+        <div><span class="lbl">Responsável:</span> <span class="val" data-f="responsavel">—</span></div>
+        <div><span class="lbl">Destinação:</span> <span class="val" data-f="destinacao">—</span></div>
+        <div><span class="lbl">Tipo de Obra:</span> <span class="val" data-f="tipo_obra">—</span></div>
+        <div><span class="lbl">Concreto Usinado:</span> <span class="val" data-f="concreto">—</span></div>
+        <div><span class="lbl">Área total de construção:</span> <span class="val" data-f="area_constr">—</span></div>
+        <div data-row="piscina"><span class="lbl">Área de piscina:</span> <span class="val" data-f="area_piscina">—</span></div>
+      </div>
+    </div>
+    <div class="p-valores">
+      <div class="p-box p-box-azul">
+        <div class="lbl">IMPOSTO CHEIO</div>
+        <div class="val" data-f="imposto_cheio">R$ 0,00</div>
+      </div>
+      <div class="p-box p-box-amarelo principal">
+        <div class="lbl">IMPOSTO REDUZIDO</div>
+        <div class="val" data-f="imposto_reduzido">R$ 0,00</div>
+      </div>
+      <div class="p-box p-box-amarelo multas">
+        <span>multas</span> <strong data-f="multas">R$ 0,00</strong>
+      </div>
+    </div>
+    <div class="p-total-row">
+      <span class="label">TOTAL</span>
+      <span class="value" data-f="total">R$ 0,00</span>
+    </div>
+    <div class="p-parcelas" data-f="parcelas">—</div>
+    <div class="p-condicoes">
+      <div class="titulo">Condições para o benefício do Imposto Reduzido</div>
+      <ul>
+        <li>Obra de pessoa física</li>
+        <li>Recolhimento contínuo no período da obra</li>
+        <li>Atingir mínimo necessário de 50% a 70% da RMT</li>
+      </ul>
+    </div>
+  </div>
+  <div class="p-col-titulo">
+    <div class="p-badge-titulo">CÁLCULO DE INSS DE OBRA</div>
+  </div>
+  <div class="p-col-azul">
+    <div class="p-donut-wrap">
+      <svg class="p-donut" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="50" cy="50" r="38" fill="none" stroke="#ffffff" stroke-width="16" />
+        <circle id="donutArc" cx="50" cy="50" r="38" fill="none" stroke="#FFD439" stroke-width="16"
+                stroke-dasharray="160 78" stroke-dashoffset="0" transform="rotate(-90 50 50)" />
+        <text x="50" y="50" class="p-donut-label big" data-f="economia_pct">0%</text>
+        <text x="50" y="62" class="p-donut-label small">de economia</text>
+        <text x="50" y="72" class="p-donut-label small">estimada</text>
+      </svg>
+    </div>
+    <p class="p-texto-info">
+      Para obter o imposto reduzido, você não precisa registrar funcionário na carteira, pois não requer vínculo empregatício.
+    </p>
+    <p class="p-destaque">
+      Te ajudamos a pagar o INSS com o<br>MÁXIMO de redução legal
+    </p>
+    <div class="p-contato">
+      <div class="header">FALE CONOSCO</div>
+      <div class="p-contato-line"><span class="ico">@</span> <span data-f="email">contato@impostoeobra.com.br</span></div>
+      <div class="p-contato-line"><span class="ico">W</span> <span data-f="whatsapp_contato">+55 (61) 9 9398-2653</span></div>
+      <div class="p-endereco" data-f="endereco">Rua Pais Leme 215, Conj. 1713, Pinheiros-SP.</div>
+    </div>
+  </div>
+</div>
+
+<div id="print-controls">
+  <button class="btn" onclick="window.print()">📥 Salvar como PDF</button>
+  <button class="btn ghost" onclick="voltar()">← Voltar ao painel</button>
+</div>
+
+<script>
+// ============================================================
+// CONFIG persistida em localStorage
+// ============================================================
+var STORAGE_KEY = "ieo-painel-config";
+var CONFIG_CONTATO = {
+  email: "contato@impostoeobra.com.br",
+  whatsapp: "+55 (61) 9 9398-2653",
+  endereco: "Rua Pais Leme 215, Conj. 1713, Pinheiros-SP."
+};
+
+function getConfig() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}"); }
+  catch (_) { return {}; }
+}
+function setConfig(cfg) { localStorage.setItem(STORAGE_KEY, JSON.stringify(cfg)); }
+
+// ============================================================
+// Helpers
+// ============================================================
+function fmtBRL(v) {
+  v = parseFloat(v) || 0;
+  return "R$ " + v.toFixed(2).replace(".", ",").replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+}
+function fmtArea(v) {
+  v = parseFloat(v) || 0;
+  if (v === 0) return "0m²";
+  var s = v.toFixed(2).replace(".", ",").replace(/,00$/, "");
+  return s + "m²";
+}
+function escapeHtml(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+    return { '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c];
+  });
+}
+function nowTxt() {
+  var d = new Date();
+  return [d.getHours(), d.getMinutes(), d.getSeconds()]
+    .map(function(n){ return String(n).padStart(2,'0'); }).join(':');
+}
+function setLive(state, txt) {
+  document.getElementById('liveBadge').className = 'live' + (state === 'off' ? ' off' : '');
+  document.getElementById('liveTxt').textContent = txt;
+}
+
+// ============================================================
+// LEITURA DA PLANILHA
+// Suporta 2 modos:
+//   A) URL publicada na web ("2PACX-..."): baixa como CSV
+//   B) ID original ou URL "/d/{ID}/edit": usa gviz JSON
+// ============================================================
+
+/**
+ * Analisa o "sheetId" do config e retorna { tipo, url, gid }.
+ * tipo: "csv" (planilha publicada) ou "gviz" (ID/URL normal)
+ */
+function detectarFonte(sheetIdOrUrl, sheetName) {
+  var s = String(sheetIdOrUrl || "").trim();
+
+  // Caso 1: URL de planilha publicada (pubhtml ou pub) com ID "2PACX-..."
+  // Ex: https://docs.google.com/spreadsheets/d/e/2PACX-.../pubhtml?gid=123&single=true
+  var mPub = s.match(/\/spreadsheets\/d\/e\/([^\/?]+)/);
+  if (mPub) {
+    var pubId = mPub[1];
+    var gidMatch = s.match(/[?&]gid=(\d+)/);
+    var gid = gidMatch ? gidMatch[1] : "0";
+    var url = "https://docs.google.com/spreadsheets/d/e/" + pubId +
+              "/pub?gid=" + gid + "&single=true&output=csv";
+    return { tipo: "csv", url: url };
+  }
+
+  // Caso 2: URL normal da planilha (com /d/ID/edit)
+  var mNormal = s.match(/\/spreadsheets\/d\/([a-zA-Z0-9_-]+)/);
+  var realId = mNormal ? mNormal[1] : s;
+
+  // Caso 3: ID puro
+  var url2 = "https://docs.google.com/spreadsheets/d/" + encodeURIComponent(realId) +
+             "/gviz/tq?tqx=out:json&sheet=" + encodeURIComponent(sheetName || "Leads");
+  return { tipo: "gviz", url: url2 };
+}
+
+async function buscarLeads() {
+  var cfg = getConfig();
+  if (!cfg.sheetId) {
+    mostrarErro("Configure a URL ou o ID da planilha primeiro (botão ⚙ Configurar).");
+    return null;
+  }
+  try {
+    var fonte = detectarFonte(cfg.sheetId, cfg.sheetName);
+    var resp = await fetch(fonte.url);
+    if (!resp.ok) throw new Error("HTTP " + resp.status + " — planilha pode não estar publicada/compartilhada");
+    var txt = await resp.text();
+
+    if (fonte.tipo === "csv") {
+      return parseCSV(txt);
+    } else {
+      var jsonStart = txt.indexOf("(");
+      var jsonEnd   = txt.lastIndexOf(")");
+      if (jsonStart < 0 || jsonEnd < 0) throw new Error("Formato de resposta inesperado");
+      var data = JSON.parse(txt.substring(jsonStart + 1, jsonEnd));
+      if (data.status === "error") {
+        throw new Error("API: " + (data.errors && data.errors[0] && data.errors[0].detailed_message || "erro desconhecido"));
+      }
+      return parseGvizTable(data.table);
+    }
+  } catch (e) {
+    mostrarErro("Não consegui ler a planilha: " + e.message +
+      "\n\nVerifique:\n1) A URL ou ID está correto\n2) A planilha está publicada na web OU compartilhada como 'qualquer pessoa com o link'\n3) Para URL publicada: cole a URL completa que termina em /pubhtml?gid=...");
+    return null;
+  }
+}
+
+/**
+ * Parse CSV simples — lida com vírgulas, aspas e quebras de linha dentro de campos.
+ */
+function parseCSV(txt) {
+  var rows = [];
+  var row = [];
+  var field = "";
+  var inQuotes = false;
+  for (var i = 0; i < txt.length; i++) {
+    var c = txt[i];
+    var next = txt[i+1];
+    if (inQuotes) {
+      if (c === '"' && next === '"') { field += '"'; i++; }
+      else if (c === '"')             { inQuotes = false; }
+      else                            { field += c; }
+    } else {
+      if (c === '"')      { inQuotes = true; }
+      else if (c === ",") { row.push(field); field = ""; }
+      else if (c === "\n"){ row.push(field); rows.push(row); row = []; field = ""; }
+      else if (c === "\r"){ /* ignora */ }
+      else                { field += c; }
+    }
+  }
+  if (field.length > 0 || row.length > 0) { row.push(field); rows.push(row); }
+  if (rows.length === 0) return [];
+
+  var header = rows[0].map(function (h) { return String(h).trim(); });
+  var out = [];
+  for (var r = 1; r < rows.length; r++) {
+    if (rows[r].length === 1 && rows[r][0] === "") continue;
+    var obj = { rowIndex: r + 1 };
+    for (var c2 = 0; c2 < header.length; c2++) {
+      var v = rows[r][c2];
+      if (v === undefined) v = "";
+      // tenta converter para número se a coluna parece numérica
+      if (typeof v === "string" && v !== "" && /^-?[\d,.]+$/.test(v) && !/^0\d/.test(v)) {
+        var n = parseFloat(v.replace(/\./g, "").replace(",", "."));
+        if (!isNaN(n) && isFinite(n)) v = n;
+      }
+      obj[header[c2]] = v;
+    }
+    out.push(obj);
+  }
+  return out;
+}
+
+function parseGvizTable(tab) {
+  var cols = (tab.cols || []).map(function (c) { return (c.label || c.id || "").trim(); });
+  var rows = (tab.rows || []).map(function (r, idx) {
+    var obj = { rowIndex: idx + 2 };
+    (r.c || []).forEach(function (cell, i) {
+      var key = cols[i] || ("col" + i);
+      var val = cell ? (cell.v !== null && cell.v !== undefined ? cell.v : "") : "";
+      if (typeof val === "string" && val.indexOf("Date(") === 0) {
+        var m = val.match(/Date\((\d+),(\d+),(\d+),(\d+),(\d+),(\d+)\)/);
+        if (m) {
+          var d = new Date(+m[1], +m[2], +m[3], +m[4], +m[5], +m[6]);
+          val = d.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" });
+        }
+      }
+      obj[key] = val;
+    });
+    return obj;
+  });
+  return rows;
+}
+
+// ============================================================
+// Estado / Renderização
+// ============================================================
+var leadsCarregados = [];
+var leadSelecionado = null;
+var ultimoTimestamp = 0;
+var pollHandle = null;
+
+async function recarregar(silent) {
+  var list = document.getElementById('leadsList');
+  if (!silent) list.innerHTML = '<div class="empty">Carregando…</div>';
+
+  var leads = await buscarLeads();
+  if (!leads) { setLive('off', 'falha'); return; }
+
+  leadsCarregados = leads.reverse(); // mais recentes primeiro
+  setLive('on', 'ao vivo · ' + nowTxt());
+  renderLista();
+}
+
+function mostrarErro(msg) {
+  setLive('off', 'falha');
+  document.getElementById('leadsList').innerHTML =
+    '<div class="errbox">' + escapeHtml(msg) + '</div>';
+}
+
+function renderLista() {
+  var termo = (document.getElementById('busca').value || "").toLowerCase();
+  var leads = leadsCarregados.filter(function (l) {
+    if (!termo) return true;
+    return (l.nome || "").toLowerCase().indexOf(termo) >= 0
+        || (l.uf || "").toLowerCase().indexOf(termo) >= 0
+        || (l.dest || "").toLowerCase().indexOf(termo) >= 0;
+  });
+
+  var list = document.getElementById('leadsList');
+  if (leads.length === 0) {
+    list.innerHTML = '<div class="empty">' +
+      (leadsCarregados.length === 0
+        ? 'Nenhum lead encontrado na planilha.'
+        : 'Nenhum lead corresponde ao filtro.') +
+      '</div>';
+    return;
+  }
+
+  var html = '<div class="lead-table">' +
+    '<div class="lead-row header">' +
+      '<div>Nome</div><div>Detalhes</div><div>Imp. cheio</div><div>Reduzido</div><div>Data</div>' +
+    '</div>';
+
+  leads.forEach(function (l) {
+    var resumo = [l.dest, l.tipo, l.uf].filter(function(x){return x;}).join(' · ');
+    var cheio  = fmtBRL(l.inss_direto);
+    var red    = fmtBRL(l.inss_reduzido);
+    var data   = String(l.data_hora || "").substring(0, 16);
+    var sel = leadSelecionado && leadSelecionado.rowIndex === l.rowIndex ? ' selected' : '';
+    html += '<div class="lead-row' + sel + '" data-row="' + l.rowIndex + '">' +
+      '<div class="nome">' + escapeHtml(l.nome || "(sem nome)") + '</div>' +
+      '<div class="resumo">' + escapeHtml(resumo) + '</div>' +
+      '<div class="valor">' + cheio + '</div>' +
+      '<div class="valor">' + red + '</div>' +
+      '<div class="data">' + escapeHtml(data) + '</div>' +
+    '</div>';
+  });
+  html += '</div>';
+  list.innerHTML = html;
+
+  list.querySelectorAll('.lead-row[data-row]').forEach(function (item) {
+    item.addEventListener('click', function () { selecionar(item); });
+  });
+}
+
+function selecionar(itemEl) {
+  document.querySelectorAll('.lead-row[data-row]').forEach(function (i) { i.classList.remove('selected'); });
+  itemEl.classList.add('selected');
+  var rowIndex = parseInt(itemEl.dataset.row, 10);
+  leadSelecionado = leadsCarregados.find(function (l) { return l.rowIndex === rowIndex; });
+  document.getElementById('formCard').style.display = 'block';
+  document.getElementById('fNome').value = leadSelecionado.nome || "";
+  atualizarPreview();
+  document.getElementById('formCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function atualizarPreview() {
+  if (!leadSelecionado) return;
+  var cheio = parseFloat(leadSelecionado.inss_direto) || 0;
+  var red   = parseFloat(leadSelecionado.inss_reduzido) || 0;
+  var mult  = parseFloat(document.getElementById('fMultas').value) || 0;
+  var parc  = parseInt(document.getElementById('fParcelas').value, 10) || 1;
+  var total = red + mult;
+  var econ  = cheio > 0 ? Math.round(((cheio - red) / cheio) * 100) : 0;
+
+  document.getElementById('pCheio').textContent = fmtBRL(cheio);
+  document.getElementById('pRed').textContent   = fmtBRL(red);
+  document.getElementById('pEcon').textContent  = econ + "%";
+  document.getElementById('pTotal').textContent = "TOTAL: " + fmtBRL(total);
+  document.getElementById('pParc').textContent  = parc > 1
+    ? parc + "x de " + fmtBRL(total / parc)
+    : "à vista";
+}
+
+// ============================================================
+// Geração da proposta (renderiza na mesma página)
+// ============================================================
+function gerarProposta() {
+  if (!leadSelecionado) return;
+
+  var l = leadSelecionado;
+  var cheio = parseFloat(l.inss_direto) || 0;
+  var red   = parseFloat(l.inss_reduzido) || 0;
+  var mult  = parseFloat(document.getElementById('fMultas').value) || 0;
+  var parc  = parseInt(document.getElementById('fParcelas').value, 10) || 1;
+  var total = red + mult;
+  var econ  = cheio > 0 ? Math.round(((cheio - red) / cheio) * 100) : 0;
+  var piscina = (parseFloat(l.a_pcoberta) || 0) + (parseFloat(l.a_pdescoberta) || 0);
+
+  var destinacao = String(l.dest || "");
+  if (destinacao.indexOf("Residencial") === 0) destinacao = "Residencial";
+  if (destinacao.indexOf("Comercial")   === 0) destinacao = "Comercial";
+  if (destinacao.indexOf("Galp")        === 0) destinacao = "Galpão Industrial";
+
+  var dados = {
+    responsavel:      l.resp || "—",
+    destinacao:       destinacao,
+    tipo_obra:        l.tipo || "—",
+    concreto:         l.concreto || "—",
+    area_constr:      fmtArea(l.a_construcao),
+    area_piscina:     fmtArea(piscina),
+    imposto_cheio:    fmtBRL(cheio),
+    imposto_reduzido: fmtBRL(red),
+    multas:           fmtBRL(mult),
+    total:            fmtBRL(total),
+    parcelas:         parc > 1
+                      ? "parcelamento em até " + parc + "x de " + fmtBRL(total / parc)
+                      : "pagamento à vista",
+    economia_pct:     econ + "%",
+    email:            CONFIG_CONTATO.email,
+    whatsapp_contato: CONFIG_CONTATO.whatsapp,
+    endereco:         CONFIG_CONTATO.endereco,
+  };
+
+  Object.keys(dados).forEach(function (k) {
+    document.querySelectorAll('[data-f="' + k + '"]').forEach(function (el) {
+      el.textContent = dados[k];
+    });
+  });
+
+  // Esconde linha de piscina se não houver
+  var rowPiscina = document.querySelector('[data-row="piscina"]');
+  if (rowPiscina) {
+    rowPiscina.style.display = (piscina > 0) ? '' : 'none';
+  }
+
+  // Atualiza o arco do donut conforme % economia
+  var perimetro = 238.76; // 2*PI*38
+  var fill = perimetro * econ / 100;
+  document.getElementById('donutArc').setAttribute(
+    'stroke-dasharray', fill + ' ' + (perimetro - fill));
+
+  document.body.classList.add('modo-proposta');
+  window.scrollTo(0, 0);
+
+  // Aguardar render e abrir o diálogo de impressão
+  setTimeout(function () { window.print(); }, 400);
+}
+
+function voltar() {
+  document.body.classList.remove('modo-proposta');
+  window.scrollTo(0, 0);
+}
+
+// ============================================================
+// Event handlers
+// ============================================================
+document.getElementById('fMultas').addEventListener('input', atualizarPreview);
+document.getElementById('fParcelas').addEventListener('input', atualizarPreview);
+document.getElementById('busca').addEventListener('input', renderLista);
+document.getElementById('btnGerar').addEventListener('click', gerarProposta);
+document.getElementById('btnLimpar').addEventListener('click', function () {
+  leadSelecionado = null;
+  document.getElementById('formCard').style.display = 'none';
+  document.querySelectorAll('.lead-row[data-row]').forEach(function (i) { i.classList.remove('selected'); });
+});
+document.getElementById('btnReload').addEventListener('click', function () { recarregar(false); });
+document.getElementById('btnConfig').addEventListener('click', function () {
+  var box = document.getElementById('configBox');
+  box.style.display = box.style.display === 'none' ? 'block' : 'none';
+  var cfg = getConfig();
+  document.getElementById('cfgSheetId').value = cfg.sheetId || "";
+  document.getElementById('cfgSheetName').value = cfg.sheetName || "Leads";
+});
+document.getElementById('btnSalvarConfig').addEventListener('click', function () {
+  var cfg = {
+    sheetId:   document.getElementById('cfgSheetId').value.trim(),
+    sheetName: document.getElementById('cfgSheetName').value.trim() || "Leads",
+  };
+  if (!cfg.sheetId) { alert("Cole a URL ou o ID da planilha."); return; }
+  setConfig(cfg);
+  document.getElementById('configBox').style.display = 'none';
+  recarregar(false);
+});
+
+// Polling a cada 8s + refresh ao focar
+setInterval(function () { recarregar(true); }, 8000);
+window.addEventListener('focus', function () { recarregar(true); });
+
+// Init
+setLive('on', 'iniciando…');
+var cfgInicial = getConfig();
+if (!cfgInicial.sheetId) {
+  document.getElementById('configBox').style.display = 'block';
+  document.getElementById('leadsList').innerHTML =
+    '<div class="empty">Configure a URL da planilha publicada (botão ⚙ Configurar) pra começar.</div>';
+} else {
+  recarregar(false);
+}
+</script>
+</body>
+</html>
