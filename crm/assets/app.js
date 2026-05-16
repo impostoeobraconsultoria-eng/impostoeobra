@@ -238,19 +238,11 @@ var router = {
 // VIEWS
 // ============================================================
 var views = {
-  kanban() {
-    $("view").innerHTML = '<div class="placeholder">' +
-      '<h2>Kanban do Funil de Vendas</h2>' +
-      '<p>Em construção — Entrega 3.</p>' +
-      '<p class="muted">Aqui vão aparecer os leads em colunas (Novo, Contato, Negociação, etc.) e você arrasta entre elas pra mover o status.</p>' +
-      '</div>';
-  },
-  leads() {
-    $("view").innerHTML = '<div class="placeholder">' +
-      '<h2>Lista de Leads</h2>' +
-      '<p>Em construção — Entrega 3.</p>' +
-      '<p class="muted">Tabela com filtros (UF, produto, status), busca, paginação e botão de Novo Lead.</p>' +
-      '</div>';
+  kanban() { kanbanView.render(); },
+  leads() { leadsView.render(); },
+  lead() {
+    var id = (location.hash || "").split("/")[1];
+    leadDetailView.render(id);
   },
   clientes() {
     $("view").innerHTML = '<div class="placeholder">' +
@@ -451,5 +443,445 @@ function init() {
 }
 
 document.addEventListener("DOMContentLoaded", init);
+
+// ============================================================
+// ENTREGA 3 — Leads (Kanban, Lista, Detalhe, WhatsApp)
+// ============================================================
+var leadsStore = {
+  data: [],
+  lastIds: {},
+  pollHandle: null,
+
+  refresh: async function (silent) {
+    try {
+      var leads = await api.call("leads.list");
+      var oldIds = leadsStore.lastIds;
+      leads.forEach(function (l) { l._isNew = !oldIds[l.id] && Object.keys(oldIds).length > 0; });
+      leadsStore.data = leads;
+      leadsStore.lastIds = {};
+      leads.forEach(function (l) { leadsStore.lastIds[l.id] = true; });
+      var route = (location.hash || "#kanban").replace(/^#/, "").split("/")[0];
+      if (!silent && (route === "kanban" || route === "leads")) {
+        if (route === "kanban") kanbanView.render();
+        else leadsView.render();
+      }
+    } catch (e) {
+      console.error("refresh leads", e);
+    }
+  },
+
+  startPolling: function () {
+    if (leadsStore.pollHandle) clearInterval(leadsStore.pollHandle);
+    leadsStore.pollHandle = setInterval(function () { leadsStore.refresh(true); }, 15000);
+    window.addEventListener("focus", function () { leadsStore.refresh(true); });
+  }
+};
+
+function etapasFunil() {
+  var s = state.serverConfig && state.serverConfig.etapas_funil;
+  if (!s) return ["Novo Lead","Contato iniciado","Em negociacao","Proposta enviada","Aguardando resposta","Fechado — ganho","Fechado — perdido","Sem retorno"];
+  return s.split(",").map(function (x) { return x.trim(); }).filter(Boolean);
+}
+
+function whatsappUrl(lead) {
+  var cfg = state.serverConfig || {};
+  var ddd = String(lead.ddd || "").replace(/\D/g, "");
+  var whats = String(lead.whatsapp || "").replace(/\D/g, "");
+  if (!ddd || !whats) return "";
+  var num = "55" + ddd + whats;
+  var tpl = cfg.msg_whatsapp_padrao || "";
+  var nome = (lead.nome || "").split(" ")[0];
+  var msg = tpl.split("{nome}").join(nome).split("{uf}").join(lead.uf || "").split("{produto}").join(lead.produto || "");
+  return "https://wa.me/" + num + (msg ? "?text=" + encodeURIComponent(msg) : "");
+}
+
+function fmtBRLshort(v) {
+  v = parseFloat(v) || 0;
+  if (v >= 1000) return "R$ " + (v / 1000).toFixed(1).replace(".", ",") + "k";
+  return "R$ " + v.toFixed(0);
+}
+
+var UFS = ["AC","AL","AM","AP","BA","CE","DF","ES","GO","MA","MG","MS","MT","PA","PB","PE","PI","PR","RJ","RN","RO","RR","RS","SC","SE","SP","TO"];
+
+// ============================================================
+// KANBAN
+// ============================================================
+var kanbanView = {
+  filtros: { busca: "", uf: "", produto: "" },
+
+  render: function () {
+    var etapas = etapasFunil();
+    var f = kanbanView.filtros;
+    var html = '<div class="kanban-toolbar">' +
+      '<input type="text" id="kb-busca" placeholder="🔎 Buscar nome, UF..." value="' + escapeHtml(f.busca) + '"/>' +
+      '<select id="kb-uf"><option value="">Todas UF</option>' +
+        UFS.map(function (u) { return '<option' + (u === f.uf ? ' selected' : '') + '>' + u + '</option>'; }).join("") +
+      '</select>' +
+      '<select id="kb-prod"><option value="">Todos produtos</option>' +
+        '<option value="obra_andamento"' + (f.produto === "obra_andamento" ? ' selected' : '') + '>Obra em andamento</option>' +
+        '<option value="obra_finalizada"' + (f.produto === "obra_finalizada" ? ' selected' : '') + '>Obra finalizada</option>' +
+      '</select>' +
+      '<button class="btn" id="kb-novo">+ Novo Lead</button>' +
+      '<button class="btn ghost" id="kb-refresh">↻</button>' +
+      '</div>';
+
+    html += '<div class="kanban-board" id="kanban-board">';
+    var leads = kanbanView.filtrar(leadsStore.data);
+    etapas.forEach(function (etapa) {
+      var leadsCol = leads.filter(function (l) { return l.status === etapa; });
+      html += '<div class="kanban-col" data-etapa="' + escapeHtml(etapa) + '">' +
+        '<div class="kanban-col-header"><span>' + escapeHtml(etapa) + '</span><span class="kanban-col-count">' + leadsCol.length + '</span></div>' +
+        '<div class="kanban-cards" data-etapa="' + escapeHtml(etapa) + '">' +
+          leadsCol.map(kanbanView.renderCard).join("") +
+        '</div>' +
+      '</div>';
+    });
+    html += '</div>';
+    $("view").innerHTML = html;
+
+    $("kb-busca").oninput = function (e) { kanbanView.filtros.busca = e.target.value; kanbanView.render(); };
+    $("kb-uf").onchange = function (e) { kanbanView.filtros.uf = e.target.value; kanbanView.render(); };
+    $("kb-prod").onchange = function (e) { kanbanView.filtros.produto = e.target.value; kanbanView.render(); };
+    $("kb-novo").onclick = function () { modalLead.open(); };
+    $("kb-refresh").onclick = function () { leadsStore.refresh(false); };
+
+    document.querySelectorAll(".kanban-card").forEach(function (c) {
+      c.onclick = function (e) {
+        if (e.target.closest("a") || e.target.closest("button")) return;
+        router.go("lead/" + c.dataset.id);
+      };
+    });
+
+    if (window.Sortable) {
+      document.querySelectorAll(".kanban-cards").forEach(function (col) {
+        Sortable.create(col, {
+          group: "kanban", animation: 150,
+          ghostClass: "sortable-ghost", chosenClass: "sortable-chosen",
+          onAdd: function (evt) {
+            var id = evt.item.dataset.id;
+            var novoStatus = evt.to.dataset.etapa;
+            kanbanView.mudarStatus(id, novoStatus);
+          }
+        });
+      });
+    }
+  },
+
+  renderCard: function (l) {
+    var tel = String(l.whatsapp || "");
+    var telTxt = (l.ddd && tel) ? "(" + l.ddd + ") " + tel.substring(0, tel.length - 4) + "-" + tel.slice(-4) : "";
+    var produto = (l.produto || "").replace("_", " ");
+    var waUrl = whatsappUrl(l);
+    return '<div class="kanban-card' + (l._isNew ? " is-new" : "") + '" data-id="' + escapeHtml(l.id) + '">' +
+      '<div class="kanban-card-name">' + escapeHtml(l.nome || "(sem nome)") + '</div>' +
+      '<div class="kanban-card-meta">' +
+        '<span>📍 ' + escapeHtml(l.uf || "?") + '</span>' +
+        (l.valor_potencial ? '<span class="valor">💰 ' + fmtBRLshort(l.valor_potencial) + '</span>' : '') +
+      '</div>' +
+      (produto ? '<div class="kanban-card-meta" style="margin-top:4px"><span>🏗 ' + escapeHtml(produto) + '</span></div>' : '') +
+      '<div class="kanban-card-actions">' +
+        (waUrl ? '<a class="whats" href="' + waUrl + '" target="_blank" rel="noopener" onclick="event.stopPropagation();">📱 ' + escapeHtml(telTxt) + '</a>' : '<span style="flex:1;color:var(--muted);font-size:11px;text-align:center;padding:4px;">sem telefone</span>') +
+      '</div>' +
+    '</div>';
+  },
+
+  filtrar: function (leads) {
+    var f = kanbanView.filtros;
+    return leads.filter(function (l) {
+      if (f.uf && l.uf !== f.uf) return false;
+      if (f.produto && l.produto !== f.produto) return false;
+      if (f.busca) {
+        var q = f.busca.toLowerCase();
+        var hay = ((l.nome || "") + " " + (l.uf || "") + " " + (l.cidade || "") + " " + (l.email || "")).toLowerCase();
+        if (hay.indexOf(q) < 0) return false;
+      }
+      return true;
+    });
+  },
+
+  mudarStatus: async function (id, novoStatus) {
+    try {
+      var lead = leadsStore.data.find(function (l) { return l.id === id; });
+      if (!lead || lead.status === novoStatus) return;
+      lead.status = novoStatus;
+      await api.call("leads.changeStatus", { id: id, novoStatus: novoStatus });
+      toast("Status atualizado.", "success");
+      leadsStore.refresh(true);
+    } catch (e) {
+      toast("Erro ao atualizar: " + (e.message || e), "error");
+      leadsStore.refresh(false);
+    }
+  }
+};
+
+// ============================================================
+// LISTA DE LEADS
+// ============================================================
+var leadsView = {
+  filtros: { busca: "", uf: "", produto: "", status: "" },
+
+  render: function () {
+    var etapas = etapasFunil();
+    var f = leadsView.filtros;
+    var html = '<div class="leads-toolbar">' +
+      '<input type="text" id="lst-busca" placeholder="🔎 Buscar..." value="' + escapeHtml(f.busca) + '"/>' +
+      '<select id="lst-uf"><option value="">Todas UF</option>' +
+        UFS.map(function (u) { return '<option' + (u === f.uf ? ' selected' : '') + '>' + u + '</option>'; }).join("") +
+      '</select>' +
+      '<select id="lst-status"><option value="">Todos status</option>' +
+        etapas.map(function (e) { return '<option' + (e === f.status ? ' selected' : '') + '>' + escapeHtml(e) + '</option>'; }).join("") +
+      '</select>' +
+      '<button class="btn" id="lst-novo">+ Novo Lead</button>' +
+      '</div>';
+
+    var leads = leadsView.filtrar(leadsStore.data);
+    html += '<div class="leads-table-wrap"><table class="leads-table">' +
+      '<thead><tr><th>Nome</th><th>Telefone</th><th>UF</th><th>Produto</th><th>Status</th><th>Responsável</th><th>Data</th></tr></thead><tbody>';
+    if (leads.length === 0) {
+      html += '<tr><td colspan="7" style="text-align:center;padding:40px;color:var(--muted)">Nenhum lead encontrado.</td></tr>';
+    } else {
+      leads.forEach(function (l) {
+        var data = String(l.data_hora || "").substring(0, 16);
+        var tel = (l.ddd && l.whatsapp) ? "(" + l.ddd + ") " + l.whatsapp : "—";
+        html += '<tr data-id="' + escapeHtml(l.id) + '">' +
+          '<td><strong>' + escapeHtml(l.nome || "(sem nome)") + '</strong></td>' +
+          '<td>' + escapeHtml(tel) + '</td>' +
+          '<td>' + escapeHtml(l.uf || "") + '</td>' +
+          '<td>' + escapeHtml((l.produto || "").replace("_", " ")) + '</td>' +
+          '<td><span class="status-pill">' + escapeHtml(l.status || "") + '</span></td>' +
+          '<td>' + escapeHtml(l.responsavel || "—") + '</td>' +
+          '<td>' + escapeHtml(data) + '</td>' +
+        '</tr>';
+      });
+    }
+    html += '</tbody></table></div>';
+    $("view").innerHTML = html;
+
+    $("lst-busca").oninput = function (e) { leadsView.filtros.busca = e.target.value; leadsView.render(); };
+    $("lst-uf").onchange = function (e) { leadsView.filtros.uf = e.target.value; leadsView.render(); };
+    $("lst-status").onchange = function (e) { leadsView.filtros.status = e.target.value; leadsView.render(); };
+    $("lst-novo").onclick = function () { modalLead.open(); };
+    document.querySelectorAll(".leads-table tr[data-id]").forEach(function (tr) {
+      tr.onclick = function () { router.go("lead/" + tr.dataset.id); };
+    });
+  },
+
+  filtrar: function (leads) {
+    var f = leadsView.filtros;
+    return leads.filter(function (l) {
+      if (f.uf && l.uf !== f.uf) return false;
+      if (f.status && l.status !== f.status) return false;
+      if (f.busca) {
+        var q = f.busca.toLowerCase();
+        var hay = ((l.nome || "") + " " + (l.uf || "") + " " + (l.cidade || "") + " " + (l.email || "") + " " + (l.whatsapp || "")).toLowerCase();
+        if (hay.indexOf(q) < 0) return false;
+      }
+      return true;
+    });
+  }
+};
+
+// ============================================================
+// DETALHE DO LEAD
+// ============================================================
+var leadDetailView = {
+  current: null,
+  atividades: [],
+
+  render: async function (id) {
+    if (!id) { router.go("kanban"); return; }
+    $("view").innerHTML = '<div class="placeholder">Carregando...</div>';
+    try {
+      var resp = await api.call("leads.get", { id: id });
+      leadDetailView.current = resp.lead;
+      leadDetailView.atividades = resp.atividades || [];
+      leadDetailView.draw();
+    } catch (e) {
+      $("view").innerHTML = '<div class="placeholder"><h2>Erro</h2><p>' + escapeHtml(e.message || e) + '</p></div>';
+    }
+  },
+
+  draw: function () {
+    var l = leadDetailView.current;
+    var etapas = etapasFunil();
+    var waUrl = whatsappUrl(l);
+    var html = '<div class="lead-detail">';
+
+    html += '<div class="lead-detail-header"><div>';
+    html += '<a href="#kanban" style="color:var(--muted);font-size:12px;">← Voltar</a>';
+    html += '<h2>' + escapeHtml(l.nome || "(sem nome)") + '</h2>';
+    html += '<div class="lead-meta">📍 ' + escapeHtml(l.uf || "?") + (l.cidade ? " · " + escapeHtml(l.cidade) : "") +
+            ' · 📱 ' + escapeHtml(l.ddd ? "(" + l.ddd + ") " + l.whatsapp : "sem telefone") +
+            (l.email ? ' · ✉️ ' + escapeHtml(l.email) : '') + '</div>';
+    html += '<div style="margin-top:8px;font-size:12px;color:var(--muted);">Origem: <strong>' + escapeHtml(l.origem || "—") + '</strong></div>';
+    html += '</div><div class="lead-detail-actions">';
+    if (waUrl) html += '<a class="btn success" href="' + waUrl + '" target="_blank" rel="noopener">📱 WhatsApp</a>';
+    if (!l.cliente_id) html += '<button class="btn" id="lead-convert">Converter em Cliente</button>';
+    else html += '<span class="muted" style="padding:8px;">→ Cliente #' + escapeHtml(l.cliente_id) + '</span>';
+    html += '<button class="btn ghost" id="lead-save">💾 Salvar</button>';
+    html += '</div></div>';
+
+    html += '<div class="lead-detail-grid"><div>';
+
+    html += '<div class="detail-card"><h3>Dados do Lead</h3>';
+    html += '<div class="field-row"><div><label>Nome</label><input type="text" id="f-nome" value="' + escapeHtml(l.nome) + '"/></div>' +
+            '<div><label>E-mail</label><input type="text" id="f-email" value="' + escapeHtml(l.email) + '"/></div></div>';
+    html += '<div class="field-row"><div><label>DDD</label><input type="text" id="f-ddd" maxlength="2" value="' + escapeHtml(l.ddd) + '"/></div>' +
+            '<div><label>WhatsApp</label><input type="text" id="f-whats" value="' + escapeHtml(l.whatsapp) + '"/></div></div>';
+    html += '<div class="field-row"><div><label>UF</label><input type="text" id="f-uf" maxlength="2" value="' + escapeHtml(l.uf) + '"/></div>' +
+            '<div><label>Cidade</label><input type="text" id="f-cidade" value="' + escapeHtml(l.cidade) + '"/></div></div>';
+    html += '<div class="field-row"><div><label>Status</label><select id="f-status">' +
+            etapas.map(function (e) { return '<option' + (e === l.status ? ' selected' : '') + '>' + escapeHtml(e) + '</option>'; }).join("") +
+            '</select></div>' +
+            '<div><label>Produto</label><select id="f-produto">' +
+            '<option value="">—</option>' +
+            '<option value="obra_andamento"' + (l.produto === "obra_andamento" ? " selected" : "") + '>Obra em andamento</option>' +
+            '<option value="obra_finalizada"' + (l.produto === "obra_finalizada" ? " selected" : "") + '>Obra finalizada</option>' +
+            '</select></div></div>';
+    html += '<div class="field-row"><div><label>Valor potencial (R$)</label><input type="number" step="0.01" id="f-valor" value="' + escapeHtml(l.valor_potencial) + '"/></div>' +
+            '<div><label>Responsável</label><input type="text" id="f-resp" value="' + escapeHtml(l.responsavel) + '"/></div></div>';
+    html += '<div class="field-row single"><div><label>Observações</label><textarea id="f-obs">' + escapeHtml(l.observacoes || "") + '</textarea></div></div>';
+    html += '</div>';
+
+    if (l.inss_direto || l.inss_reduzido) {
+      html += '<div class="detail-card"><h3>Resultado da calculadora</h3>';
+      var inssDir = parseFloat(l.inss_direto) || 0;
+      var inssRed = parseFloat(l.inss_reduzido) || 0;
+      var econ = parseFloat(l.economia) || 0;
+      html += '<div class="field-row">' +
+              '<div><label>Imposto direto</label><div><strong>R$ ' + inssDir.toLocaleString("pt-BR",{minimumFractionDigits:2}) + '</strong></div></div>' +
+              '<div><label>Imposto reduzido</label><div><strong style="color:var(--success)">R$ ' + inssRed.toLocaleString("pt-BR",{minimumFractionDigits:2}) + '</strong></div></div></div>';
+      if (econ) {
+        var econPct = inssDir > 0 ? Math.round((econ / inssDir) * 100) : 0;
+        html += '<div class="field-row single"><div><label>Economia estimada</label><strong>R$ ' + econ.toLocaleString("pt-BR",{minimumFractionDigits:2}) + ' (' + econPct + '%)</strong></div></div>';
+      }
+      html += '</div>';
+    }
+
+    html += '</div><div><div class="detail-card"><h3>Timeline</h3>';
+    if (!leadDetailView.atividades.length) {
+      html += '<p class="muted" style="font-size:13px;">Sem atividades.</p>';
+    } else {
+      html += '<ul class="timeline">' + leadDetailView.atividades.map(function (a) {
+        return '<li class="timeline-item">' +
+          '<div><strong>' + escapeHtml(a.tipo || "evento") + '</strong></div>' +
+          '<div>' + escapeHtml(a.descricao || "") + '</div>' +
+          '<div class="ts">' + escapeHtml(String(a.data_hora || "").substring(0,16)) + ' <span class="author">' + escapeHtml(a.autor || "") + '</span></div>' +
+        '</li>';
+      }).join("") + '</ul>';
+    }
+    html += '<hr style="margin:14px 0;border:none;border-top:1px solid var(--border)">';
+    html += '<label style="font-size:12px;font-weight:600">Adicionar nota</label>';
+    html += '<textarea id="nova-nota" placeholder="Anotação livre..." style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font:inherit;font-size:13px;margin-top:4px;min-height:60px;"></textarea>';
+    html += '<button class="btn btn-sm" id="btn-add-nota" style="margin-top:6px;">Adicionar</button>';
+    html += '</div></div></div></div>';
+    $("view").innerHTML = html;
+
+    var saveBtn = $("lead-save");
+    saveBtn.onclick = async function () {
+      saveBtn.disabled = true;
+      try {
+        await api.call("leads.update", {
+          id: l.id,
+          nome: $("f-nome").value.trim(),
+          ddd: $("f-ddd").value.replace(/\D/g, ""),
+          whatsapp: $("f-whats").value.replace(/\D/g, ""),
+          email: $("f-email").value.trim(),
+          uf: $("f-uf").value.trim().toUpperCase(),
+          cidade: $("f-cidade").value.trim(),
+          status: $("f-status").value,
+          produto: $("f-produto").value,
+          valor_potencial: parseFloat($("f-valor").value) || 0,
+          responsavel: $("f-resp").value.trim(),
+          observacoes: $("f-obs").value,
+        });
+        toast("Lead salvo.", "success");
+        leadsStore.refresh(true);
+        leadDetailView.render(l.id);
+      } catch (e) { toast("Erro: " + (e.message || e), "error"); }
+      saveBtn.disabled = false;
+    };
+
+    var convertBtn = $("lead-convert");
+    if (convertBtn) convertBtn.onclick = async function () {
+      if (!confirm("Converter este lead em cliente? Os campos básicos serão copiados.")) return;
+      try {
+        await api.call("leads.convertToClient", {
+          id: l.id, nome: l.nome, ddd: l.ddd, telefone: l.whatsapp, email: l.email,
+          end_uf: l.uf, obra_end_uf: l.uf
+        });
+        toast("Lead convertido em cliente.", "success");
+        leadsStore.refresh(false);
+        leadDetailView.render(l.id);
+      } catch (e) { toast("Erro: " + (e.message || e), "error"); }
+    };
+
+    $("btn-add-nota").onclick = async function () {
+      var nota = $("nova-nota").value.trim();
+      if (!nota) return;
+      try {
+        await api.call("atividades.create", { ref_tipo: "lead", ref_id: l.id, tipo: "nota", descricao: nota });
+        toast("Nota adicionada.", "success");
+        leadDetailView.render(l.id);
+      } catch (e) { toast("Erro: " + (e.message || e), "error"); }
+    };
+  }
+};
+
+// ============================================================
+// MODAL NOVO LEAD
+// ============================================================
+var modalLead = {
+  open: function () {
+    var html = '<div class="modal-backdrop" id="modal-bg"><div class="modal-content">';
+    html += '<h3>+ Novo Lead manual</h3>';
+    html += '<div class="field-row"><div><label>Nome *</label><input type="text" id="m-nome"/></div>' +
+            '<div><label>E-mail</label><input type="text" id="m-email"/></div></div>';
+    html += '<div class="field-row"><div><label>DDD</label><input type="text" id="m-ddd" maxlength="2"/></div>' +
+            '<div><label>WhatsApp</label><input type="text" id="m-whats"/></div></div>';
+    html += '<div class="field-row"><div><label>UF</label><input type="text" id="m-uf" maxlength="2"/></div>' +
+            '<div><label>Cidade</label><input type="text" id="m-cidade"/></div></div>';
+    html += '<div class="field-row"><div><label>Produto</label><select id="m-produto">' +
+            '<option value="">—</option><option value="obra_andamento">Obra em andamento</option><option value="obra_finalizada">Obra finalizada</option>' +
+            '</select></div>' +
+            '<div><label>Valor potencial (R$)</label><input type="number" step="0.01" id="m-valor"/></div></div>';
+    html += '<div class="field-row single"><div><label>Observações</label><textarea id="m-obs"></textarea></div></div>';
+    html += '<div class="modal-actions">' +
+            '<button class="btn ghost" id="m-cancel">Cancelar</button>' +
+            '<button class="btn" id="m-save">Criar Lead</button></div>';
+    html += '</div></div>';
+    document.body.insertAdjacentHTML("beforeend", html);
+
+    $("m-cancel").onclick = function () { document.getElementById("modal-bg").remove(); };
+    $("m-save").onclick = async function () {
+      var nome = $("m-nome").value.trim();
+      if (!nome) { toast("Nome é obrigatório", "error"); return; }
+      try {
+        await api.call("leads.create", {
+          nome: nome,
+          ddd: $("m-ddd").value.replace(/\D/g, ""),
+          whatsapp: $("m-whats").value.replace(/\D/g, ""),
+          email: $("m-email").value.trim(),
+          uf: $("m-uf").value.trim().toUpperCase(),
+          cidade: $("m-cidade").value.trim(),
+          produto: $("m-produto").value,
+          valor_potencial: parseFloat($("m-valor").value) || 0,
+          observacoes: $("m-obs").value,
+          origem: "manual"
+        });
+        toast("Lead criado.", "success");
+        document.getElementById("modal-bg").remove();
+        leadsStore.refresh(false);
+      } catch (e) { toast("Erro: " + (e.message || e), "error"); }
+    };
+  }
+};
+
+// Hook no afterLogin: inicia polling e carrega leads
+var _origAfterLogin = auth.afterLogin;
+auth.afterLogin = function () {
+  _origAfterLogin();
+  setTimeout(function () { leadsStore.refresh(false); leadsStore.startPolling(); }, 600);
+};
 
 })();
