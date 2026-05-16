@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Aviso de Privacidade | Imposto &amp; Obra Consultoria</title>
+  <meta name="description" content="Conheça a política de privacidade da Imposto &amp; Obra Consultoria e saiba como tratamos e protegemos os seus dados pessoais." />
+  <meta name="theme-color" content="#0071E3" />
+
+  <!-- Tipografia -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <style>
+    /* Variáveis de cores e bases */
+    :root {
+      --primary: #0071E3;
+      --action:  #006AE0;
+      --success: #3AB97A;
+      --text:    #1E1E1E;
+      --muted:   #64748b;
+      --bg:      #FFFFFF;
+      --bg-soft: #F8F9FB;
+      --border:  #E5E7EB;
+      --radius:  14px;
+      --radius-btn: 9999px;
+      --shadow:  0 4px 16px rgba(2, 6, 23, 0.06);
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body {
+      font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      color: var(--text);
+      background: var(--bg);
+      line-height: 1.55;
+      -webkit-font-smoothing: antialiased;
+    }
+    img { max-width: 100%; height: auto; display: block; }
+    a { color: var(--primary); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 24px; }
+
+    /* Header */
+    .site-header {
+      border-bottom: 1px solid var(--border);
+      background: #fff;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .header-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 18px 0;
+    }
+    .brand { display: flex; align-items: center; gap: 10px; }
+    .brand-mark {
+      width: 38px; height: 38px;
+      background: var(--primary);
+      border-radius: 8px;
+      display: grid; place-items: center;
+      color: #fff; font-weight: 800; font-size: 18px;
+    }
+    .brand-name {
+      font-weight: 700; font-size: 18px; color: var(--text);
+      line-height: 1.1;
+    }
+    .brand-name small { display: block; font-weight: 500; font-size: 12px; color: var(--muted); }
+    .nav a { color: var(--text); font-weight: 500; margin-left: 24px; }
+
+    /* Buttons */
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center;
+      gap: 8px;
+      padding: 13px 24px;
+      font: inherit; font-weight: 700; font-size: 15px;
+      border: none; cursor: pointer;
+      color: #fff; background: var(--action);
+      border-radius: var(--radius-btn);
+      text-decoration: none;
+      box-shadow: 0 6px 14px rgba(0, 106, 224, 0.22);
+      transition: transform .06s ease, filter .15s ease, box-shadow .15s ease;
+    }
+    .btn:hover { filter: brightness(1.05); text-decoration: none; }
+    .btn:active { transform: translateY(1px); }
+
+    .final-cta {
+      background: var(--bg-soft);
+      border-radius: var(--radius);
+      padding: 48px 32px;
+      text-align: center;
+      margin: 40px 0;
+    }
+    .final-cta h3 { font-size: 28px; margin: 0 0 12px; font-weight: 800; letter-spacing: -0.02em; }
+    .final-cta .sub { color: var(--primary); font-weight: 600; margin: 0; }
+    .final-cta .sub-2 { color: #334155; margin: 4px 0 24px; }
+
+    /* Footer */
+    .site-footer {
+      border-top: 1px solid var(--border);
+      padding: 28px 0;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .footer-row { display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+    .footer-row a { color: var(--muted); }
+
+    /* Article styles */
+    main.article-page {
+      padding-top: 56px;
+    }
+    .article-content {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    .article-title {
+      font-size: clamp(28px, 4vw, 42px);
+      font-weight: 800;
+      margin: 0 0 20px;
+      line-height: 1.2;
+      letter-spacing: -0.02em;
+    }
+    .article-content p {
+      margin: 0 0 16px;
+      font-size: 17px;
+      color: #334155;
+    }
+    .article-content ul, .article-content ol {
+      padding-left: 20px;
+      margin: 0 0 20px;
+    }
+    .article-content ul li,
+    .article-content ol li {
+      margin-bottom: 8px;
+      font-size: 16px;
+      color: #334155;
+    }
+    .article-content h2 {
+      font-size: 24px;
+      font-weight: 700;
+      margin: 32px 0 12px;
+      color: var(--text);
+    }
+    .article-content h3 {
+      font-size: 20px;
+      font-weight: 600;
+      margin: 24px 0 8px;
+      color: var(--text);
+    }
+    .article-content strong {
+      color: var(--text);
+    }
+    @media (max-width: 600px) {
+      .nav a { margin-left: 16px; }
+      .article-content { padding: 0 8px; }
+      .final-cta { padding: 32px 24px; }
+    }
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <header class="site-header">
+    <div class="container header-inner">
+      <a href="/" class="brand">
+        <div class="brand-mark">I&amp;O</div>
+        <div class="brand-name">Imposto &amp; Obra <small>Consultoria</small></div>
+      </a>
+      <nav class="nav">
+        <a href="/#calc">Simular</a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Article content -->
+  <main class="article-page">
+    <section>
+      <div class="container">
+        <article class="article-content">
+          <h1 class="article-title">Aviso de Privacidade</h1>
+
+          <p>Este Aviso de Privacidade explica como a <strong>Imposto &amp; Obra Consultoria</strong> coleta, utiliza e protege os dados pessoais de clientes e usuários. Ao utilizar nossos serviços ou preencher a calculadora de INSS, você declara estar ciente e de acordo com as práticas aqui descritas.</p>
+
+          <h2>1. Controlador e Encarregado de Dados (DPO)</h2>
+          <p>Os dados pessoais coletados são tratados sob a responsabilidade de:</p>
+          <ul>
+            <li><strong>Controlador:</strong> Imposto &amp; Obra Consultoria, CNPJ n.º XX.XXX.0001-XX</li>
+            <li><strong>Sede:</strong> Rua Pais Leme, 215, Conjunto 1713 – Pinheiros, São Paulo–SP, 05424-150</li>
+            <li><strong>Encarregado de Proteção de Dados (DPO):</strong> Paulo Ricardo da Silva Santana – Encarregado de Dados</li>
+            <li><strong>E‑mail:</strong> <a href="mailto:privacidade@impostoeobraconsultoria.com.br">privacidade@impostoeobraconsultoria.com.br</a></li>
+          </ul>
+
+          <h2>2. Dados pessoais coletados</h2>
+          <h3>2.1 Na Calculadora de INSS da Obra</h3>
+          <ul>
+            <li><strong>Dados técnicos da obra:</strong> estado, área, tipo, padrão construtivo e custo estimado;</li>
+            <li><strong>Dados de contato:</strong> nome, e‑mail e WhatsApp.</li>
+          </ul>
+          <h3>2.2 Durante o Atendimento e Contratação</h3>
+          <ul>
+            <li><strong>Dados cadastrais:</strong> nome completo, CPF, endereço, e‑mail e telefone;</li>
+            <li><strong>Dados profissionais ou empresariais:</strong> CNPJ, inscrição CEI/CNO, documentos da obra, alvarás etc.;</li>
+            <li><strong>Dados necessários à execução do contrato:</strong> informações para emissão de documentos fiscais e demais obrigações legais.</li>
+          </ul>
+          <p>Essas informações são utilizadas para elaborar diagnósticos tributários, propostas, contratos e prestar os serviços de regularização de obras junto à Receita Federal.</p>
+
+          <h2>3. Finalidade do tratamento</h2>
+          <p>Os dados pessoais são utilizados para:</p>
+          <ul>
+            <li><strong>Realizar simulações de INSS</strong> e estimativas de redução tributária;</li>
+            <li><strong>Entrar em contato</strong> com o usuário e enviar vídeos, relatórios e propostas personalizadas;</li>
+            <li><strong>Celebar e executar contratos</strong> de prestação de serviços jurídicos e técnicos;</li>
+            <li><strong>Cumprir obrigações legais e fiscais</strong> junto à Receita Federal e a outros órgãos públicos;</li>
+            <li><strong>Emitir documentos fiscais</strong> (notas, recibos, CNDs, etc.);</li>
+            <li>Garantir segurança jurídica, comunicação e registro das interações;</li>
+            <li>Cumprir exigências legais aplicáveis à advocacia e à LGPD.</li>
+          </ul>
+
+          <h2>4. Bases legais para o tratamento</h2>
+          <p>O tratamento de dados pela Imposto &amp; Obra Consultoria se fundamenta nas seguintes bases da LGPD:</p>
+          <ul>
+            <li><strong>Execução de contrato ou procedimentos preliminares</strong> (art. 7º, V) – quando o titular solicita orçamento, simulação ou celebra contrato;</li>
+            <li><strong>Cumprimento de obrigação legal ou regulatória</strong> (art. 7º, II) – para emissão de documentos fiscais e cumprimento de deveres advocatícios e tributários;</li>
+            <li><strong>Consentimento do titular</strong> (art. 7º, I) – para envio de comunicações, vídeos explicativos e conteúdos de marketing;</li>
+            <li><strong>Legítimo interesse</strong> (art. 7º, IX) – para manutenção da relação com clientes, gestão administrativa e prevenção a fraudes.</li>
+          </ul>
+
+          <h2>5. Compartilhamento de dados</h2>
+          <p>A Imposto &amp; Obra Consultoria <strong>não vende, aluga ou comercializa dados pessoais</strong>. O compartilhamento ocorre apenas quando necessário para cumprir as finalidades informadas, com:</p>
+          <ul>
+            <li><strong>Profissionais parceiros</strong> (engenheiros civis, contadores e técnicos) comprometidos com a confidencialidade;</li>
+            <li><strong>Órgãos públicos e autoridades</strong> (como Receita Federal, prefeituras ou CREA), quando exigido por lei;</li>
+            <li><strong>Provedores de hospedagem, e‑mail e automação de marketing</strong>, que operam sob cláusulas de proteção de dados e conformidade com a LGPD.</li>
+          </ul>
+
+          <h2>6. Armazenamento e segurança</h2>
+          <p>Adotamos medidas técnicas e organizacionais adequadas para proteger os dados pessoais contra perda, acesso indevido, destruição ou divulgação não autorizada. Os dados são armazenados em servidores seguros, no Brasil ou em provedores com conformidade reconhecida (ex.: cláusulas contratuais padrão e adequação à LGPD). O acesso interno é restrito a profissionais autorizados e treinados.</p>
+
+          <h2>7. Retenção e eliminação de dados</h2>
+          <p>Os dados pessoais são mantidos pelo tempo necessário à execução do contrato, cumprimento de obrigações legais e exercício regular de direitos. Após esse período, os dados poderão ser anonimizados ou eliminados de forma segura, salvo quando o armazenamento for exigido por lei (ex.: prazos da OAB, fiscais e contábeis).</p>
+
+          <h2>8. Direitos do titular de dados</h2>
+          <p>Nos termos dos arts. 18 e seguintes da LGPD, o titular pode exercer, a qualquer momento, os seguintes direitos:</p>
+          <ul>
+            <li>Confirmação da existência de tratamento;</li>
+            <li>Acesso aos dados pessoais;</li>
+            <li>Correção de dados incompletos, inexatos ou desatualizados;</li>
+            <li>Eliminação ou anonimização de dados desnecessários;</li>
+            <li>Portabilidade dos dados, quando aplicável;</li>
+            <li>Informação sobre compartilhamento e revogação do consentimento;</li>
+            <li>Oposição a tratamentos baseados em legítimo interesse, quando cabível.</li>
+          </ul>
+          <p>Para exercer seus direitos, o titular pode enviar solicitação ao Encarregado de Dados pelo e‑mail <a href="mailto:privacidade@impostoeobraconsultoria.com.br">privacidade@impostoeobraconsultoria.com.br</a>.</p>
+
+          <h2>9. Cookies e tecnologias de rastreamento</h2>
+          <p>Nosso site utiliza cookies para melhorar a navegação, analisar desempenho e personalizar a experiência do usuário. O titular pode gerenciar ou desativar cookies a qualquer momento nas configurações do navegador. Os tipos de cookies utilizados incluem:</p>
+          <ul>
+            <li><strong>Essenciais:</strong> garantem o funcionamento da página;</li>
+            <li><strong>Analíticos:</strong> mensuram acesso e desempenho;</li>
+            <li><strong>De marketing (opcionais):</strong> permitem avaliar campanhas e anúncios.</li>
+          </ul>
+
+          <h2>10. Comunicação e marketing</h2>
+          <p>A Imposto &amp; Obra Consultoria poderá enviar comunicações sobre simulações, propostas e informações relacionadas à regularização de obras e legislação tributária. O titular pode solicitar o cancelamento do envio a qualquer momento por meio do link de descadastramento nas mensagens ou pelo e‑mail do Encarregado.</p>
+
+          <h2>11. Atualizações desta política</h2>
+          <p>Esta Política de Privacidade poderá ser atualizada sempre que necessário. A versão mais recente estará sempre disponível em nosso site, e a data de última atualização será indicada no início do documento.</p>
+
+          <h2>12. Foro e legislação aplicável</h2>
+          <p>Esta Política é regida pelas leis da República Federativa do Brasil, em especial pela Lei Geral de Proteção de Dados Pessoais (Lei nº 13.709/2018). Fica eleito o foro da Comarca de Brasília/DF, com renúncia a qualquer outro, para dirimir controvérsias decorrentes do tratamento de dados pessoais.</p>
+
+        </article>
+
+        <!-- Final CTA -->
+        <div class="final-cta">
+          <h3>Precisa falar com a nossa equipe?</h3>
+          <p class="sub">Estamos à disposição para esclarecer dúvidas ou atender solicitações de privacidade.</p>
+          <p class="sub-2">Clique no botão e fale conosco pelo WhatsApp.</p>
+          <a class="btn" href="https://wa.me/556193982653?text=Ol%C3%A1%21%20Tenho%20d%C3%BAvidas%20sobre%20a%20pol%C3%ADtica%20de%20privacidade." target="_blank" rel="noopener">Fale conosco</a>
+        </div>
+
+      </div>
+    </section>
+  </main>
+
+  <!-- Footer -->
+  <footer class="site-footer">
+    <div class="container footer-row">
+      <div>© <span id="ano"></span> – Imposto&amp;Obra Consultoria. Todos os direitos reservados.</div>
+      <div><a href="/aviso-de-privacidade.html">Aviso de Privacidade</a></div>
+    </div>
+  </footer>
+
+  <script>
+    // Atualiza o ano do rodapé automaticamente
+    document.getElementById('ano').textContent = new Date().getFullYear();
+  </script>
+</body>
+</html>
