@@ -974,6 +974,7 @@ var clienteDetailView = {
       var resp = await api.call("clientes.get", { id: id });
       clienteDetailView.current = resp.cliente;
       clienteDetailView.atividades = resp.atividades || [];
+      clienteDetailView.contratos = resp.contratos || [];
       clienteDetailView.draw();
     } catch (e) {
       $("view").innerHTML = '<div class="placeholder"><h2>Erro</h2><p>' + escapeHtml(e.message || e) + '</p></div>';
@@ -1063,6 +1064,35 @@ var clienteDetailView = {
     html += '<textarea id="cf-obs" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font:inherit;font-size:13px;min-height:80px;">' + escapeHtml(c.obs_contrato || "") + '</textarea>';
     html += '</div>';
 
+    // === CONTRATOS ===
+    html += '<div class="cliente-section">';
+    html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">';
+    html += '<h3 style="margin:0;border:none;padding:0;">Contratos (' + clienteDetailView.contratos.length + ')</h3>';
+    html += '<button class="btn btn-sm" id="cli-novo-contrato">+ Novo Contrato</button>';
+    html += '</div>';
+    if (!clienteDetailView.contratos.length) {
+      html += '<p class="muted" style="font-size:13px;">Nenhum contrato cadastrado.</p>';
+    } else {
+      html += '<table class="users-table"><thead><tr>' +
+              '<th>Número</th><th>Produto</th><th>Status</th><th>Valor</th><th>Pago</th><th>Parcelas</th><th>Assinatura</th><th></th></tr></thead><tbody>';
+      clienteDetailView.contratos.forEach(function (ct) {
+        var vt = parseFloat(ct.valor_total) || 0;
+        var vp = parseFloat(ct.valor_pago) || 0;
+        html += '<tr>' +
+          '<td><strong>' + escapeHtml(ct.numero) + '</strong></td>' +
+          '<td>' + escapeHtml((ct.produto || "").replace("_", " ")) + '</td>' +
+          '<td><span class="badge ' + (ct.status === "concluido" ? "consultor" : (ct.status === "cancelado" ? "inativo" : "admin")) + '">' + escapeHtml(ct.status || "—") + '</span></td>' +
+          '<td>R$ ' + vt.toLocaleString("pt-BR", {minimumFractionDigits:2}) + '</td>' +
+          '<td>R$ ' + vp.toLocaleString("pt-BR", {minimumFractionDigits:2}) + '</td>' +
+          '<td>' + escapeHtml(ct.parcelas || 1) + 'x</td>' +
+          '<td>' + escapeHtml(String(ct.data_assinatura || "").substring(0,10)) + '</td>' +
+          '<td><button class="btn btn-sm ghost" data-edit-contrato="' + escapeHtml(ct.id) + '">Editar</button></td>' +
+        '</tr>';
+      });
+      html += '</tbody></table>';
+    }
+    html += '</div>';
+
     // Timeline
     html += '<div class="cliente-section"><h3>Histórico</h3>';
     if (!clienteDetailView.atividades.length) {
@@ -1137,6 +1167,17 @@ var clienteDetailView = {
         clienteDetailView.render(c.id);
       } catch (e) { toast("Erro: " + (e.message || e), "error"); }
     };
+
+    // Contratos: novo + editar
+    var btnNovoCtr = $("cli-novo-contrato");
+    if (btnNovoCtr) btnNovoCtr.onclick = function () { modalContrato.open(null, c.id); };
+    document.querySelectorAll("[data-edit-contrato]").forEach(function (btn) {
+      btn.onclick = function () {
+        var id = btn.dataset.editContrato;
+        var ct = clienteDetailView.contratos.find(function (x) { return x.id === id; });
+        if (ct) modalContrato.open(ct, c.id);
+      };
+    });
   }
 };
 
@@ -1285,6 +1326,112 @@ var conversionWizard = {
         $("wz-finalize").disabled = false;
       }
     };
+  }
+};
+
+// ============================================================
+// ENTREGA 4B — Modal de Contrato (criar / editar)
+// ============================================================
+var modalContrato = {
+  open: function (contrato, clienteId) {
+    var isEdit = !!contrato;
+    var c = contrato || {
+      cliente_id: clienteId,
+      numero: "",
+      produto: "obra_andamento",
+      status: "rascunho",
+      valor_total: 0,
+      valor_pago: 0,
+      forma_pagamento: "À vista",
+      parcelas: 1,
+      data_assinatura: "",
+      data_inicio: "",
+      data_conclusao: "",
+      observacoes: ""
+    };
+
+    var html = '<div class="modal-backdrop" id="modal-bg"><div class="modal-content" style="max-width:680px;">';
+    html += '<h3>' + (isEdit ? '✏️ Editar Contrato ' + escapeHtml(c.numero) : '+ Novo Contrato') + '</h3>';
+
+    html += '<div class="field-3">' +
+      '<div><label>Número</label><input type="text" id="mc-numero" value="' + escapeHtml(c.numero) + '" placeholder="auto"/></div>' +
+      '<div><label>Produto</label><select id="mc-produto">' +
+        '<option value="obra_andamento"' + (c.produto === "obra_andamento" ? " selected" : "") + '>Obra em andamento</option>' +
+        '<option value="obra_finalizada"' + (c.produto === "obra_finalizada" ? " selected" : "") + '>Obra finalizada</option>' +
+      '</select></div>' +
+      '<div><label>Status</label><select id="mc-status">' +
+        ['rascunho','assinado','em_execucao','concluido','cancelado'].map(function (s) {
+          return '<option' + (c.status === s ? " selected" : "") + ' value="' + s + '">' + s + '</option>';
+        }).join("") +
+      '</select></div></div>';
+
+    html += '<div class="field-4">' +
+      '<div><label>Valor total (R$)</label><input type="number" step="0.01" id="mc-vt" value="' + (parseFloat(c.valor_total) || 0) + '"/></div>' +
+      '<div><label>Valor pago (R$)</label><input type="number" step="0.01" id="mc-vp" value="' + (parseFloat(c.valor_pago) || 0) + '"/></div>' +
+      '<div><label>Parcelas</label><input type="number" min="1" id="mc-parc" value="' + (parseInt(c.parcelas, 10) || 1) + '"/></div>' +
+      '<div><label>Forma de pagto</label><input type="text" id="mc-forma" value="' + escapeHtml(c.forma_pagamento) + '"/></div></div>';
+
+    html += '<div class="field-3">' +
+      '<div><label>Data assinatura</label><input type="text" id="mc-da" placeholder="DD/MM/AAAA" value="' + escapeHtml(c.data_assinatura) + '"/></div>' +
+      '<div><label>Data início</label><input type="text" id="mc-di" placeholder="DD/MM/AAAA" value="' + escapeHtml(c.data_inicio) + '"/></div>' +
+      '<div><label>Data conclusão</label><input type="text" id="mc-dc" placeholder="DD/MM/AAAA" value="' + escapeHtml(c.data_conclusao) + '"/></div></div>';
+
+    html += '<div class="field-3"><div style="grid-column:span 3"><label>Observações</label>' +
+            '<textarea id="mc-obs" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font:inherit;font-size:13px;min-height:60px;">' + escapeHtml(c.observacoes) + '</textarea></div></div>';
+
+    html += '<div class="modal-actions">';
+    if (isEdit) html += '<button class="btn danger btn-sm" id="mc-delete" style="margin-right:auto">🗑 Excluir</button>';
+    html += '<button class="btn ghost" id="mc-cancel">Cancelar</button>' +
+            '<button class="btn" id="mc-save">' + (isEdit ? 'Salvar' : 'Criar Contrato') + '</button></div>';
+    html += '</div></div>';
+    document.body.insertAdjacentHTML("beforeend", html);
+
+    $("mc-cancel").onclick = function () { document.getElementById("modal-bg").remove(); };
+
+    $("mc-save").onclick = async function () {
+      $("mc-save").disabled = true;
+      try {
+        var payload = {
+          cliente_id: clienteId,
+          numero: $("mc-numero").value.trim(),
+          produto: $("mc-produto").value,
+          status: $("mc-status").value,
+          valor_total: parseFloat($("mc-vt").value) || 0,
+          valor_pago: parseFloat($("mc-vp").value) || 0,
+          parcelas: parseInt($("mc-parc").value, 10) || 1,
+          forma_pagamento: $("mc-forma").value.trim(),
+          data_assinatura: $("mc-da").value.trim(),
+          data_inicio: $("mc-di").value.trim(),
+          data_conclusao: $("mc-dc").value.trim(),
+          observacoes: $("mc-obs").value
+        };
+        if (isEdit) {
+          payload.id = c.id;
+          await api.call("contratos.update", payload);
+          toast("Contrato atualizado.", "success");
+        } else {
+          await api.call("contratos.create", payload);
+          toast("Contrato criado.", "success");
+        }
+        document.getElementById("modal-bg").remove();
+        clienteDetailView.render(clienteId);
+      } catch (e) {
+        toast("Erro: " + (e.message || e), "error");
+        $("mc-save").disabled = false;
+      }
+    };
+
+    if (isEdit) {
+      $("mc-delete").onclick = async function () {
+        if (!confirm("Excluir o contrato " + c.numero + " ?")) return;
+        try {
+          await api.call("contratos.delete", { id: c.id });
+          toast("Contrato excluído.", "success");
+          document.getElementById("modal-bg").remove();
+          clienteDetailView.render(clienteId);
+        } catch (e) { toast("Erro: " + (e.message || e), "error"); }
+      };
+    }
   }
 };
 
