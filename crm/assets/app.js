@@ -244,12 +244,10 @@ var views = {
     var id = (location.hash || "").split("/")[1];
     leadDetailView.render(id);
   },
-  clientes() {
-    $("view").innerHTML = '<div class="placeholder">' +
-      '<h2>Lista de Clientes</h2>' +
-      '<p>Em construção — Entrega 4.</p>' +
-      '<p class="muted">Cadastro completo dos clientes convertidos a partir de leads.</p>' +
-      '</div>';
+  clientes() { clientesView.render(); },
+  cliente() {
+    var id = (location.hash || "").split("/")[1];
+    clienteDetailView.render(id);
   },
   config() {
     views._configRender();
@@ -803,18 +801,7 @@ var leadDetailView = {
     };
 
     var convertBtn = $("lead-convert");
-    if (convertBtn) convertBtn.onclick = async function () {
-      if (!confirm("Converter este lead em cliente? Os campos básicos serão copiados.")) return;
-      try {
-        await api.call("leads.convertToClient", {
-          id: l.id, nome: l.nome, ddd: l.ddd, telefone: l.whatsapp, email: l.email,
-          end_uf: l.uf, obra_end_uf: l.uf
-        });
-        toast("Lead convertido em cliente.", "success");
-        leadsStore.refresh(false);
-        leadDetailView.render(l.id);
-      } catch (e) { toast("Erro: " + (e.message || e), "error"); }
-    };
+    if (convertBtn) convertBtn.onclick = function () { conversionWizard.open(l); };
 
     $("btn-add-nota").onclick = async function () {
       var nota = $("nova-nota").value.trim();
@@ -882,6 +869,430 @@ var _origAfterLogin = auth.afterLogin;
 auth.afterLogin = function () {
   _origAfterLogin();
   setTimeout(function () { leadsStore.refresh(false); leadsStore.startPolling(); }, 600);
+};
+
+
+// ============================================================
+// ENTREGA 4A — Clientes (Lista, Detalhe, Wizard de conversao)
+// ============================================================
+
+var clientesStore = {
+  data: [],
+  pollHandle: null,
+
+  refresh: async function (silent) {
+    try {
+      clientesStore.data = await api.call("clientes.list") || [];
+      var route = (location.hash || "#kanban").replace(/^#/, "").split("/")[0];
+      if (!silent && route === "clientes") clientesView.render();
+    } catch (e) { console.error("refresh clientes", e); }
+  },
+  startPolling: function () {
+    if (clientesStore.pollHandle) clearInterval(clientesStore.pollHandle);
+    clientesStore.pollHandle = setInterval(function () { clientesStore.refresh(true); }, 30000);
+  }
+};
+
+// === LISTA DE CLIENTES ===
+var clientesView = {
+  filtros: { busca: "", uf: "" },
+
+  render: function () {
+    var f = clientesView.filtros;
+    var html = '<div class="leads-toolbar">' +
+      '<input type="text" id="cl-busca" placeholder="🔎 Buscar nome, CPF, e-mail..." value="' + escapeHtml(f.busca) + '"/>' +
+      '<select id="cl-uf"><option value="">Todas UF</option>' +
+        UFS.map(function (u) { return '<option' + (u === f.uf ? ' selected' : '') + '>' + u + '</option>'; }).join("") +
+      '</select>' +
+      '<button class="btn ghost" id="cl-refresh">↻ Atualizar</button>' +
+      '</div>';
+
+    if (!clientesStore.data.length) {
+      html += '<div class="placeholder"><h2>Nenhum cliente ainda</h2>' +
+              '<p class="muted">Para criar um cliente, abra um lead e clique em <strong>Converter em Cliente</strong>.</p></div>';
+      $("view").innerHTML = html;
+      $("cl-busca").oninput = function (e) { clientesView.filtros.busca = e.target.value; clientesView.render(); };
+      $("cl-uf").onchange = function (e) { clientesView.filtros.uf = e.target.value; clientesView.render(); };
+      $("cl-refresh").onclick = function () { clientesStore.refresh(false); };
+      return;
+    }
+
+    var clientes = clientesView.filtrar(clientesStore.data);
+    html += '<div class="leads-table-wrap"><table class="leads-table">' +
+      '<thead><tr><th>Nome</th><th>CPF/CNPJ</th><th>Telefone</th><th>UF Obra</th><th>Tipo Obra</th><th>Criado em</th></tr></thead><tbody>';
+    if (!clientes.length) {
+      html += '<tr><td colspan="6" style="text-align:center;padding:40px;color:var(--muted)">Nenhum cliente corresponde ao filtro.</td></tr>';
+    } else {
+      clientes.forEach(function (c) {
+        var doc = c.cpf || c.cnpj || "—";
+        var tel = (c.ddd && c.telefone) ? "(" + c.ddd + ") " + c.telefone : "—";
+        var data = String(c.criado_em || "").substring(0, 16);
+        html += '<tr data-id="' + escapeHtml(c.id) + '">' +
+          '<td><strong>' + escapeHtml(c.nome || "(sem nome)") + '</strong></td>' +
+          '<td>' + escapeHtml(doc) + '</td>' +
+          '<td>' + escapeHtml(tel) + '</td>' +
+          '<td>' + escapeHtml(c.obra_end_uf || c.end_uf || "") + '</td>' +
+          '<td>' + escapeHtml(c.obra_tipo || "") + '</td>' +
+          '<td>' + escapeHtml(data) + '</td>' +
+        '</tr>';
+      });
+    }
+    html += '</tbody></table></div>';
+    $("view").innerHTML = html;
+
+    $("cl-busca").oninput = function (e) { clientesView.filtros.busca = e.target.value; clientesView.render(); };
+    $("cl-uf").onchange = function (e) { clientesView.filtros.uf = e.target.value; clientesView.render(); };
+    $("cl-refresh").onclick = function () { clientesStore.refresh(false); };
+    document.querySelectorAll(".leads-table tr[data-id]").forEach(function (tr) {
+      tr.onclick = function () { router.go("cliente/" + tr.dataset.id); };
+    });
+  },
+
+  filtrar: function (clientes) {
+    var f = clientesView.filtros;
+    return clientes.filter(function (c) {
+      if (f.uf && c.obra_end_uf !== f.uf && c.end_uf !== f.uf) return false;
+      if (f.busca) {
+        var q = f.busca.toLowerCase();
+        var hay = ((c.nome || "") + " " + (c.cpf || "") + " " + (c.cnpj || "") + " " + (c.email || "")).toLowerCase();
+        if (hay.indexOf(q) < 0) return false;
+      }
+      return true;
+    });
+  }
+};
+
+// === DETALHE DO CLIENTE (cadastro completo) ===
+var clienteDetailView = {
+  current: null,
+  atividades: [],
+
+  render: async function (id) {
+    if (!id) { router.go("clientes"); return; }
+    $("view").innerHTML = '<div class="placeholder">Carregando...</div>';
+    try {
+      var resp = await api.call("clientes.get", { id: id });
+      clienteDetailView.current = resp.cliente;
+      clienteDetailView.atividades = resp.atividades || [];
+      clienteDetailView.draw();
+    } catch (e) {
+      $("view").innerHTML = '<div class="placeholder"><h2>Erro</h2><p>' + escapeHtml(e.message || e) + '</p></div>';
+    }
+  },
+
+  draw: function () {
+    var c = clienteDetailView.current;
+    var html = '<div class="cliente-detail">';
+
+    // Header
+    html += '<div class="lead-detail-header"><div>';
+    html += '<a href="#clientes" style="color:var(--muted);font-size:12px;">← Voltar para Clientes</a>';
+    html += '<h2>' + escapeHtml(c.nome || "(sem nome)") + '</h2>';
+    var doc = c.cpf ? "CPF " + c.cpf : (c.cnpj ? "CNPJ " + c.cnpj : "");
+    html += '<div class="lead-meta">' + escapeHtml(doc) +
+            (c.ddd && c.telefone ? ' · 📱 (' + c.ddd + ') ' + c.telefone : '') +
+            (c.email ? ' · ✉️ ' + escapeHtml(c.email) : '') + '</div>';
+    if (c.lead_id_origem) html += '<div style="margin-top:6px;font-size:12px"><a href="#lead/' + escapeHtml(c.lead_id_origem) + '" style="color:var(--primary)">↩ Ver lead de origem</a></div>';
+    html += '</div><div class="lead-detail-actions">';
+    html += '<button class="btn" id="cli-save">💾 Salvar tudo</button>';
+    html += '</div></div>';
+
+    // Pessoais
+    html += '<div class="cliente-section"><h3>Dados Pessoais</h3>';
+    html += '<div class="field-3">' +
+      '<div><label>Nome completo</label><input type="text" id="cf-nome" value="' + escapeHtml(c.nome) + '"/></div>' +
+      '<div><label>CPF</label><input type="text" id="cf-cpf" value="' + escapeHtml(c.cpf) + '"/></div>' +
+      '<div><label>CNPJ</label><input type="text" id="cf-cnpj" value="' + escapeHtml(c.cnpj) + '"/></div></div>';
+    html += '<div class="field-3">' +
+      '<div><label>RG</label><input type="text" id="cf-rg" value="' + escapeHtml(c.rg) + '"/></div>' +
+      '<div><label>Data nascimento</label><input type="text" id="cf-nasc" placeholder="DD/MM/AAAA" value="' + escapeHtml(c.data_nascimento) + '"/></div>' +
+      '<div><label>Estado civil</label><input type="text" id="cf-civil" value="' + escapeHtml(c.estado_civil) + '"/></div></div>';
+    html += '<div class="field-3">' +
+      '<div><label>Profissão</label><input type="text" id="cf-prof" value="' + escapeHtml(c.profissao) + '"/></div>' +
+      '<div><label>DDD</label><input type="text" id="cf-ddd" maxlength="2" value="' + escapeHtml(c.ddd) + '"/></div>' +
+      '<div><label>Telefone</label><input type="text" id="cf-tel" value="' + escapeHtml(c.telefone) + '"/></div></div>';
+    html += '<div class="field-3"><div><label>E-mail</label><input type="text" id="cf-email" value="' + escapeHtml(c.email) + '"/></div><div></div><div></div></div>';
+    html += '</div>';
+
+    // Endereço residencial
+    html += '<div class="cliente-section"><h3>Endereço Residencial</h3>';
+    html += '<div class="field-3">' +
+      '<div style="grid-column:span 2;"><label>Logradouro</label><input type="text" id="cf-endlog" value="' + escapeHtml(c.end_logradouro) + '"/></div>' +
+      '<div><label>Bairro</label><input type="text" id="cf-endbai" value="' + escapeHtml(c.end_bairro) + '"/></div></div>';
+    html += '<div class="field-3">' +
+      '<div><label>Cidade</label><input type="text" id="cf-endcid" value="' + escapeHtml(c.end_cidade) + '"/></div>' +
+      '<div><label>UF</label><input type="text" id="cf-enduf" maxlength="2" value="' + escapeHtml(c.end_uf) + '"/></div>' +
+      '<div><label>CEP</label><input type="text" id="cf-endcep" value="' + escapeHtml(c.end_cep) + '"/></div></div>';
+    html += '</div>';
+
+    // Endereço da Obra
+    html += '<div class="cliente-section"><h3>Endereço da Obra</h3>';
+    html += '<div class="field-3">' +
+      '<div style="grid-column:span 2;"><label>Logradouro</label><input type="text" id="cf-oblog" value="' + escapeHtml(c.obra_end_logradouro) + '"/></div>' +
+      '<div><label>Bairro</label><input type="text" id="cf-obbai" value="' + escapeHtml(c.obra_end_bairro) + '"/></div></div>';
+    html += '<div class="field-3">' +
+      '<div><label>Cidade</label><input type="text" id="cf-obcid" value="' + escapeHtml(c.obra_end_cidade) + '"/></div>' +
+      '<div><label>UF</label><input type="text" id="cf-obuf" maxlength="2" value="' + escapeHtml(c.obra_end_uf) + '"/></div>' +
+      '<div></div></div>';
+    html += '<div class="field-3">' +
+      '<div><label>Matrícula do imóvel</label><input type="text" id="cf-obmat" value="' + escapeHtml(c.obra_matricula) + '"/></div>' +
+      '<div><label>IPTU (inscrição)</label><input type="text" id="cf-obiptu" value="' + escapeHtml(c.obra_iptu) + '"/></div>' +
+      '<div><label>Tipo da obra</label><select id="cf-obtipo">' +
+        '<option value="">—</option>' +
+        ['Alvenaria','Mista','Madeira'].map(function (t) { return '<option' + (c.obra_tipo === t ? ' selected' : '') + '>' + t + '</option>'; }).join("") +
+      '</select></div></div>';
+    html += '<div class="field-3"><div style="grid-column:span 3;"><label>Descrição da obra</label><input type="text" id="cf-obdesc" value="' + escapeHtml(c.obra_descricao) + '"/></div></div>';
+    html += '</div>';
+
+    // Bancários
+    html += '<div class="cliente-section"><h3>Dados Bancários</h3>';
+    html += '<div class="field-4">' +
+      '<div><label>Banco</label><input type="text" id="cf-banco" value="' + escapeHtml(c.banco) + '"/></div>' +
+      '<div><label>Agência</label><input type="text" id="cf-ag" value="' + escapeHtml(c.agencia) + '"/></div>' +
+      '<div><label>Conta</label><input type="text" id="cf-conta" value="' + escapeHtml(c.conta) + '"/></div>' +
+      '<div><label>Tipo</label><select id="cf-tipoconta">' +
+        '<option value="">—</option>' +
+        '<option' + (c.tipo_conta === "corrente" ? ' selected' : '') + ' value="corrente">Corrente</option>' +
+        '<option' + (c.tipo_conta === "poupanca" ? ' selected' : '') + ' value="poupanca">Poupança</option>' +
+      '</select></div></div>';
+    html += '<div class="field-3"><div style="grid-column:span 3;"><label>Chave PIX</label><input type="text" id="cf-pix" value="' + escapeHtml(c.pix) + '"/></div></div>';
+    html += '</div>';
+
+    // Observações
+    html += '<div class="cliente-section"><h3>Observações para Contrato</h3>';
+    html += '<textarea id="cf-obs" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font:inherit;font-size:13px;min-height:80px;">' + escapeHtml(c.obs_contrato || "") + '</textarea>';
+    html += '</div>';
+
+    // Timeline
+    html += '<div class="cliente-section"><h3>Histórico</h3>';
+    if (!clienteDetailView.atividades.length) {
+      html += '<p class="muted" style="font-size:13px;">Sem atividades.</p>';
+    } else {
+      html += '<ul class="timeline">' + clienteDetailView.atividades.map(function (a) {
+        return '<li class="timeline-item">' +
+          '<div><strong>' + escapeHtml(a.tipo || "evento") + '</strong></div>' +
+          '<div>' + escapeHtml(a.descricao || "") + '</div>' +
+          '<div class="ts">' + escapeHtml(String(a.data_hora || "").substring(0,16)) + ' <span class="author">' + escapeHtml(a.autor || "") + '</span></div>' +
+        '</li>';
+      }).join("") + '</ul>';
+    }
+    html += '<hr style="margin:14px 0;border:none;border-top:1px solid var(--border)">';
+    html += '<label style="font-size:12px;font-weight:600">Adicionar nota</label>';
+    html += '<textarea id="cli-nota" placeholder="Anotação..." style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font:inherit;font-size:13px;margin-top:4px;min-height:60px;"></textarea>';
+    html += '<button class="btn btn-sm" id="cli-add-nota" style="margin-top:6px;">Adicionar</button>';
+    html += '</div>';
+
+    html += '</div>';
+    $("view").innerHTML = html;
+
+    var save = $("cli-save");
+    save.onclick = async function () {
+      save.disabled = true;
+      try {
+        await api.call("clientes.update", {
+          id: c.id,
+          nome: $("cf-nome").value.trim(),
+          cpf: $("cf-cpf").value.trim(),
+          cnpj: $("cf-cnpj").value.trim(),
+          rg: $("cf-rg").value.trim(),
+          data_nascimento: $("cf-nasc").value.trim(),
+          estado_civil: $("cf-civil").value.trim(),
+          profissao: $("cf-prof").value.trim(),
+          ddd: $("cf-ddd").value.replace(/\D/g, ""),
+          telefone: $("cf-tel").value.replace(/\D/g, ""),
+          email: $("cf-email").value.trim(),
+          end_logradouro: $("cf-endlog").value.trim(),
+          end_bairro: $("cf-endbai").value.trim(),
+          end_cidade: $("cf-endcid").value.trim(),
+          end_uf: $("cf-enduf").value.trim().toUpperCase(),
+          end_cep: $("cf-endcep").value.trim(),
+          obra_end_logradouro: $("cf-oblog").value.trim(),
+          obra_end_bairro: $("cf-obbai").value.trim(),
+          obra_end_cidade: $("cf-obcid").value.trim(),
+          obra_end_uf: $("cf-obuf").value.trim().toUpperCase(),
+          obra_matricula: $("cf-obmat").value.trim(),
+          obra_iptu: $("cf-obiptu").value.trim(),
+          obra_tipo: $("cf-obtipo").value,
+          obra_descricao: $("cf-obdesc").value.trim(),
+          banco: $("cf-banco").value.trim(),
+          agencia: $("cf-ag").value.trim(),
+          conta: $("cf-conta").value.trim(),
+          tipo_conta: $("cf-tipoconta").value,
+          pix: $("cf-pix").value.trim(),
+          obs_contrato: $("cf-obs").value,
+        });
+        toast("Cliente salvo.", "success");
+        clientesStore.refresh(true);
+        clienteDetailView.render(c.id);
+      } catch (e) { toast("Erro: " + (e.message || e), "error"); }
+      save.disabled = false;
+    };
+
+    $("cli-add-nota").onclick = async function () {
+      var nota = $("cli-nota").value.trim();
+      if (!nota) return;
+      try {
+        await api.call("atividades.create", { ref_tipo: "cliente", ref_id: c.id, tipo: "nota", descricao: nota });
+        toast("Nota adicionada.", "success");
+        clienteDetailView.render(c.id);
+      } catch (e) { toast("Erro: " + (e.message || e), "error"); }
+    };
+  }
+};
+
+// === WIZARD DE CONVERSÃO Lead → Cliente (3 passos) ===
+var conversionWizard = {
+  lead: null,
+  data: {},
+  step: 1,
+
+  open: function (lead) {
+    conversionWizard.lead = lead;
+    conversionWizard.step = 1;
+    conversionWizard.data = {
+      // pré-preenchido pelo lead
+      nome: lead.nome || "",
+      ddd: lead.ddd || "",
+      telefone: lead.whatsapp || "",
+      email: lead.email || "",
+      end_uf: lead.uf || "",
+      obra_end_uf: lead.uf || "",
+      obra_end_cidade: lead.cidade || "",
+    };
+    conversionWizard.draw();
+  },
+
+  collect: function () {
+    var d = conversionWizard.data;
+    if (conversionWizard.step === 1) {
+      ["nome","cpf","cnpj","rg","data_nascimento","estado_civil","profissao","ddd","telefone","email"].forEach(function (k) {
+        var el = $("wz-" + k); if (el) d[k] = (el.value || "").trim();
+      });
+    } else if (conversionWizard.step === 2) {
+      ["end_logradouro","end_bairro","end_cidade","end_uf","end_cep",
+       "obra_end_logradouro","obra_end_bairro","obra_end_cidade","obra_end_uf",
+       "obra_matricula","obra_iptu","obra_tipo","obra_descricao"].forEach(function (k) {
+        var el = $("wz-" + k); if (el) d[k] = (el.value || "").trim();
+      });
+    } else if (conversionWizard.step === 3) {
+      ["banco","agencia","conta","tipo_conta","pix","obs_contrato"].forEach(function (k) {
+        var el = $("wz-" + k); if (el) d[k] = (el.value || "").trim();
+      });
+    }
+  },
+
+  draw: function () {
+    var d = conversionWizard.data;
+    var step = conversionWizard.step;
+    var existing = document.getElementById("modal-bg");
+    if (existing) existing.remove();
+
+    var stepsHtml = '<div class="wizard-steps">';
+    ["Dados Pessoais","Endereços","Bancário"].forEach(function (label, i) {
+      var n = i + 1;
+      var cls = n === step ? "active" : (n < step ? "done" : "");
+      stepsHtml += '<div class="wizard-step ' + cls + '">' + n + '. ' + label + '</div>';
+    });
+    stepsHtml += '</div>';
+
+    var content = "";
+    if (step === 1) {
+      content += '<div class="field-3">' +
+        '<div><label>Nome *</label><input type="text" id="wz-nome" value="' + escapeHtml(d.nome) + '"/></div>' +
+        '<div><label>CPF</label><input type="text" id="wz-cpf" value="' + escapeHtml(d.cpf || "") + '"/></div>' +
+        '<div><label>CNPJ</label><input type="text" id="wz-cnpj" value="' + escapeHtml(d.cnpj || "") + '"/></div></div>';
+      content += '<div class="field-3">' +
+        '<div><label>RG</label><input type="text" id="wz-rg" value="' + escapeHtml(d.rg || "") + '"/></div>' +
+        '<div><label>Nascimento</label><input type="text" id="wz-data_nascimento" placeholder="DD/MM/AAAA" value="' + escapeHtml(d.data_nascimento || "") + '"/></div>' +
+        '<div><label>Estado civil</label><input type="text" id="wz-estado_civil" value="' + escapeHtml(d.estado_civil || "") + '"/></div></div>';
+      content += '<div class="field-3">' +
+        '<div><label>Profissão</label><input type="text" id="wz-profissao" value="' + escapeHtml(d.profissao || "") + '"/></div>' +
+        '<div><label>DDD</label><input type="text" id="wz-ddd" maxlength="2" value="' + escapeHtml(d.ddd) + '"/></div>' +
+        '<div><label>Telefone</label><input type="text" id="wz-telefone" value="' + escapeHtml(d.telefone) + '"/></div></div>';
+      content += '<div class="field-3"><div style="grid-column:span 3"><label>E-mail</label><input type="text" id="wz-email" value="' + escapeHtml(d.email) + '"/></div></div>';
+    } else if (step === 2) {
+      content += '<h4 style="margin:0 0 8px;font-size:13px;">Endereço Residencial</h4>';
+      content += '<div class="field-3">' +
+        '<div style="grid-column:span 2"><label>Logradouro</label><input type="text" id="wz-end_logradouro" value="' + escapeHtml(d.end_logradouro || "") + '"/></div>' +
+        '<div><label>Bairro</label><input type="text" id="wz-end_bairro" value="' + escapeHtml(d.end_bairro || "") + '"/></div></div>';
+      content += '<div class="field-3">' +
+        '<div><label>Cidade</label><input type="text" id="wz-end_cidade" value="' + escapeHtml(d.end_cidade || "") + '"/></div>' +
+        '<div><label>UF</label><input type="text" id="wz-end_uf" maxlength="2" value="' + escapeHtml(d.end_uf) + '"/></div>' +
+        '<div><label>CEP</label><input type="text" id="wz-end_cep" value="' + escapeHtml(d.end_cep || "") + '"/></div></div>';
+
+      content += '<h4 style="margin:14px 0 8px;font-size:13px;border-top:1px solid var(--border);padding-top:14px;">Endereço da Obra</h4>';
+      content += '<div class="field-3">' +
+        '<div style="grid-column:span 2"><label>Logradouro</label><input type="text" id="wz-obra_end_logradouro" value="' + escapeHtml(d.obra_end_logradouro || "") + '"/></div>' +
+        '<div><label>Bairro</label><input type="text" id="wz-obra_end_bairro" value="' + escapeHtml(d.obra_end_bairro || "") + '"/></div></div>';
+      content += '<div class="field-3">' +
+        '<div><label>Cidade</label><input type="text" id="wz-obra_end_cidade" value="' + escapeHtml(d.obra_end_cidade) + '"/></div>' +
+        '<div><label>UF</label><input type="text" id="wz-obra_end_uf" maxlength="2" value="' + escapeHtml(d.obra_end_uf) + '"/></div>' +
+        '<div><label>Tipo</label><select id="wz-obra_tipo">' +
+          '<option value="">—</option>' +
+          ['Alvenaria','Mista','Madeira'].map(function (t) { return '<option' + (d.obra_tipo === t ? ' selected' : '') + '>' + t + '</option>'; }).join("") +
+        '</select></div></div>';
+      content += '<div class="field-3">' +
+        '<div><label>Matrícula</label><input type="text" id="wz-obra_matricula" value="' + escapeHtml(d.obra_matricula || "") + '"/></div>' +
+        '<div><label>IPTU</label><input type="text" id="wz-obra_iptu" value="' + escapeHtml(d.obra_iptu || "") + '"/></div>' +
+        '<div><label>Descrição</label><input type="text" id="wz-obra_descricao" value="' + escapeHtml(d.obra_descricao || "") + '"/></div></div>';
+    } else if (step === 3) {
+      content += '<div class="field-4">' +
+        '<div><label>Banco</label><input type="text" id="wz-banco" value="' + escapeHtml(d.banco || "") + '"/></div>' +
+        '<div><label>Agência</label><input type="text" id="wz-agencia" value="' + escapeHtml(d.agencia || "") + '"/></div>' +
+        '<div><label>Conta</label><input type="text" id="wz-conta" value="' + escapeHtml(d.conta || "") + '"/></div>' +
+        '<div><label>Tipo</label><select id="wz-tipo_conta">' +
+          '<option value="">—</option>' +
+          '<option' + (d.tipo_conta === "corrente" ? ' selected' : '') + ' value="corrente">Corrente</option>' +
+          '<option' + (d.tipo_conta === "poupanca" ? ' selected' : '') + ' value="poupanca">Poupança</option>' +
+        '</select></div></div>';
+      content += '<div class="field-3"><div style="grid-column:span 3"><label>Chave PIX</label><input type="text" id="wz-pix" value="' + escapeHtml(d.pix || "") + '"/></div></div>';
+      content += '<div class="field-3"><div style="grid-column:span 3"><label>Observações para contrato</label>' +
+                 '<textarea id="wz-obs_contrato" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font:inherit;font-size:13px;min-height:80px;">' + escapeHtml(d.obs_contrato || "") + '</textarea></div></div>';
+    }
+
+    var btnNext = step < 3 ? '<button class="btn" id="wz-next">Próximo →</button>' : '<button class="btn success" id="wz-finalize">✓ Criar Cliente</button>';
+    var btnBack = step > 1 ? '<button class="btn ghost" id="wz-back">← Voltar</button>' : '<button class="btn ghost" id="wz-cancel">Cancelar</button>';
+
+    var html = '<div class="modal-backdrop wizard-modal" id="modal-bg"><div class="modal-content">' +
+      '<h3>Converter Lead em Cliente — passo ' + step + '/3</h3>' +
+      stepsHtml + content +
+      '<div class="wizard-actions">' + btnBack + btnNext + '</div>' +
+      '</div></div>';
+    document.body.insertAdjacentHTML("beforeend", html);
+
+    if ($("wz-cancel")) $("wz-cancel").onclick = function () { document.getElementById("modal-bg").remove(); };
+    if ($("wz-back"))   $("wz-back").onclick   = function () { conversionWizard.collect(); conversionWizard.step--; conversionWizard.draw(); };
+    if ($("wz-next"))   $("wz-next").onclick   = function () {
+      conversionWizard.collect();
+      if (conversionWizard.step === 1 && !conversionWizard.data.nome) { toast("Nome é obrigatório", "error"); return; }
+      conversionWizard.step++;
+      conversionWizard.draw();
+    };
+    if ($("wz-finalize")) $("wz-finalize").onclick = async function () {
+      conversionWizard.collect();
+      $("wz-finalize").disabled = true;
+      try {
+        var payload = Object.assign({ id: conversionWizard.lead.id }, conversionWizard.data);
+        var resp = await api.call("leads.convertToClient", payload);
+        toast("Cliente criado com sucesso!", "success");
+        document.getElementById("modal-bg").remove();
+        leadsStore.refresh(true);
+        clientesStore.refresh(true);
+        if (resp && resp.cliente && resp.cliente.id) router.go("cliente/" + resp.cliente.id);
+        else router.go("clientes");
+      } catch (e) {
+        toast("Erro: " + (e.message || e), "error");
+        $("wz-finalize").disabled = false;
+      }
+    };
+  }
+};
+
+// Hook adicional no afterLogin: carregar clientes tambem
+var _afterLoginPrev = auth.afterLogin;
+auth.afterLogin = function () {
+  _afterLoginPrev();
+  setTimeout(function () { clientesStore.refresh(true); clientesStore.startPolling(); }, 800);
 };
 
 })();
