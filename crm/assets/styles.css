@@ -444,3 +444,63 @@ body {
 .modal-actions {
   display: flex; gap: 8px; justify-content: flex-end; margin-top: 20px;
 }
+
+/* ============================================================
+   ENTREGA 4A — Clientes + Wizard
+   ============================================================ */
+
+.cliente-detail { max-width: 1000px; margin: 0 auto; }
+.cliente-section {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 18px 20px;
+  margin-bottom: 14px;
+  box-shadow: var(--shadow);
+}
+.cliente-section h3 {
+  margin: 0 0 14px;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  color: var(--muted);
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 8px;
+}
+.field-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 10px; }
+.field-4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 12px; margin-bottom: 10px; }
+@media (max-width: 720px) { .field-3, .field-4 { grid-template-columns: 1fr; } }
+.field-3 label, .field-4 label { display: block; font-size: 12px; font-weight: 600; margin-bottom: 4px; color: var(--text); }
+.field-3 input, .field-3 select, .field-4 input, .field-4 select {
+  width: 100%; padding: 8px 10px;
+  border: 1px solid var(--border); border-radius: 6px;
+  font: inherit; font-size: 13px;
+}
+
+/* Wizard */
+.wizard-modal .modal-content { max-width: 720px; }
+.wizard-steps {
+  display: flex; gap: 8px; margin-bottom: 18px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 14px;
+}
+.wizard-step {
+  flex: 1;
+  padding: 8px 12px;
+  text-align: center;
+  font-size: 12px; font-weight: 600;
+  background: #eef2f7; color: var(--muted);
+  border-radius: 6px;
+  position: relative;
+}
+.wizard-step.active { background: var(--primary); color: #fff; }
+.wizard-step.done   { background: rgba(22,163,74,.1); color: var(--success); }
+.wizard-step::after {
+  content: ""; position: absolute; right: -8px; top: 50%; transform: translateY(-50%);
+  width: 0; height: 0; border-left: 6px solid var(--border); border-top: 5px solid transparent; border-bottom: 5px solid transparent;
+}
+.wizard-step:last-child::after { display: none; }
+.wizard-actions {
+  display: flex; gap: 8px; justify-content: space-between;
+  margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--border);
+}
