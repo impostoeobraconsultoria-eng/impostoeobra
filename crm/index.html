@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>CRM Imposto &amp; Obra</title>
+<meta name="theme-color" content="#0071E3" />
+<link rel="stylesheet" href="./assets/styles.css" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<!-- Google Identity Services (GIS) -->
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+</head>
+<body>
+
+<!-- ============================== LOADING INICIAL ============================== -->
+<div id="initial-loader" class="initial-loader">
+  <div class="brand-mark">I&amp;O</div>
+  <div class="loader-spinner"></div>
+  <div class="muted">Carregando CRM...</div>
+</div>
+
+<!-- ============================== LOGIN ============================== -->
+<div id="login-screen" class="login-screen hidden">
+  <div class="login-card">
+    <div class="brand-mark big">I&amp;O</div>
+    <h1>CRM Imposto &amp; Obra</h1>
+    <p class="muted">Faça login com sua conta Google para acessar.</p>
+
+    <div id="g-signin-btn" class="g-signin-container"></div>
+
+    <p class="login-help muted" id="login-help">
+      Apenas usuários cadastrados na aba <code>Usuarios</code> da planilha podem entrar.
+    </p>
+
+    <div class="login-config" id="login-config">
+      <button class="link-btn" id="btn-show-config">⚙ Configuração inicial</button>
+      <div class="config-fields hidden" id="config-fields">
+        <label>URL do Apps Script</label>
+        <input type="text" id="cfg-apps-script-url" placeholder="https://script.google.com/macros/s/.../exec" />
+
+        <label>Google OAuth Client ID</label>
+        <input type="text" id="cfg-google-client-id" placeholder="xxxxxxxxxx.apps.googleusercontent.com" />
+
+        <small class="muted">
+          Veja o guia em <code>crm/docs/INSTRUCOES_OAUTH.md</code> para gerar o Client ID.
+        </small>
+
+        <div class="config-actions">
+          <button class="btn" id="btn-save-config">Salvar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================== SHELL (apos login) ============================== -->
+<div id="app-shell" class="app-shell hidden">
+  <header class="topbar">
+    <div class="topbar-left">
+      <div class="brand-mark">I&amp;O</div>
+      <div class="brand-name">
+        <div class="title">CRM</div>
+        <div class="sub">Imposto &amp; Obra</div>
+      </div>
+    </div>
+
+    <nav class="topbar-nav" id="topbar-nav">
+      <a href="#kanban" data-route="kanban">Kanban</a>
+      <a href="#leads" data-route="leads">Leads</a>
+      <a href="#clientes" data-route="clientes">Clientes</a>
+      <a href="#config" data-route="config">Config</a>
+    </nav>
+
+    <div class="topbar-right">
+      <span class="live-badge" id="live-badge"><span class="dot"></span><span id="live-text">conectando...</span></span>
+      <div class="user-menu" id="user-menu">
+        <span id="user-email" class="muted"></span>
+        <button class="link-btn" id="btn-logout">Sair</button>
+      </div>
+    </div>
+  </header>
+
+  <main id="view" class="view">
+    <!-- conteudo da rota atual renderizado aqui -->
+  </main>
+</div>
+
+<!-- ============================== TOAST ============================== -->
+<div id="toast" class="toast"></div>
+
+<script src="./assets/app.js"></script>
+</body>
+</html>
