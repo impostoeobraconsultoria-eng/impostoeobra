@@ -504,3 +504,54 @@ body {
   display: flex; gap: 8px; justify-content: space-between;
   margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--border);
 }
+
+/* ============================================================
+   ENTREGA 5 — Dashboard
+   ============================================================ */
+.dash-toolbar {
+  display: flex; gap: 12px; align-items: center; margin-bottom: 16px; flex-wrap: wrap;
+}
+.dash-toolbar select, .dash-toolbar input[type="date"] {
+  padding: 7px 10px; border: 1px solid var(--border); border-radius: 6px;
+  font: inherit; font-size: 13px;
+}
+
+.kpi-grid {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 18px;
+}
+@media (max-width: 900px) { .kpi-grid { grid-template-columns: repeat(2, 1fr); } }
+.kpi-card {
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: 10px; padding: 16px 18px;
+  box-shadow: var(--shadow);
+}
+.kpi-card .lbl {
+  font-size: 11px; font-weight: 700; color: var(--muted);
+  text-transform: uppercase; letter-spacing: .04em;
+  margin-bottom: 4px;
+}
+.kpi-card .val {
+  font-size: 22px; font-weight: 800; color: var(--text);
+  letter-spacing: -0.01em;
+}
+.kpi-card.success .val { color: var(--success); }
+.kpi-card.primary .val { color: var(--primary); }
+.kpi-card.warning .val { color: var(--warning); }
+.kpi-card.danger .val  { color: var(--danger); }
+.kpi-card .sub { font-size: 11px; color: var(--muted); margin-top: 4px; }
+
+.chart-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 14px;
+}
+@media (max-width: 900px) { .chart-grid { grid-template-columns: 1fr; } }
+.chart-card {
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: 10px; padding: 16px;
+  box-shadow: var(--shadow);
+}
+.chart-card h3 {
+  margin: 0 0 12px;
+  font-size: 13px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .04em; color: var(--muted);
+}
+.chart-card canvas { max-height: 260px; }
