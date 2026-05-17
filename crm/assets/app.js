@@ -355,7 +355,10 @@ var views = {
           await api.call("config.set", { chave: "etapas_funil",       valor: $("cfg-etapas").value.trim() });
           await api.call("config.set", { chave: "produtos",           valor: $("cfg-produtos").value.trim() });
           state.serverConfig = await api.call("config.get");
-          toast("Parâmetros salvos.", "success");
+          // refresh dos stores que usam config (etapas/produtos) e da view atual
+          if (typeof leadsStore !== "undefined" && leadsStore.refresh) leadsStore.refresh(true);
+          if (typeof clientesStore !== "undefined" && clientesStore.refresh) clientesStore.refresh(true);
+          toast("Parâmetros salvos. Aplicados em todas as telas.", "success");
         } catch (e) { toast("Erro: " + (e.message || e), "error"); }
       };
 
@@ -482,6 +485,22 @@ function etapasFunil() {
   return s.split(",").map(function (x) { return x.trim(); }).filter(Boolean);
 }
 
+// Lista de produtos vinda da Config. Cada item: { value, label }
+function produtosLista() {
+  var s = state.serverConfig && state.serverConfig.produtos;
+  var arr = s ? s.split(",").map(function (x) { return x.trim(); }).filter(Boolean)
+              : ["obra_andamento","obra_finalizada"];
+  return arr.map(function (v) {
+    return { value: v, label: v.replace(/_/g, " ").replace(/\b\w/g, function (c) { return c.toUpperCase(); }) };
+  });
+}
+
+function optsProdutos(selecionado) {
+  return produtosLista().map(function (p) {
+    return '<option value="' + escapeHtml(p.value) + '"' + (selecionado === p.value ? ' selected' : '') + '>' + escapeHtml(p.label) + '</option>';
+  }).join("");
+}
+
 function whatsappUrl(lead) {
   var cfg = state.serverConfig || {};
   var ddd = String(lead.ddd || "").replace(/\D/g, "");
@@ -516,10 +535,7 @@ var kanbanView = {
       '<select id="kb-uf"><option value="">Todas UF</option>' +
         UFS.map(function (u) { return '<option' + (u === f.uf ? ' selected' : '') + '>' + u + '</option>'; }).join("") +
       '</select>' +
-      '<select id="kb-prod"><option value="">Todos produtos</option>' +
-        '<option value="obra_andamento"' + (f.produto === "obra_andamento" ? ' selected' : '') + '>Obra em andamento</option>' +
-        '<option value="obra_finalizada"' + (f.produto === "obra_finalizada" ? ' selected' : '') + '>Obra finalizada</option>' +
-      '</select>' +
+      '<select id="kb-prod"><option value="">Todos produtos</option>' + optsProdutos(f.produto) + '</select>' +
       '<button class="btn" id="kb-novo">+ Novo Lead</button>' +
       '<button class="btn ghost" id="kb-refresh">↻</button>' +
       '</div>';
@@ -733,27 +749,70 @@ var leadDetailView = {
             etapas.map(function (e) { return '<option' + (e === l.status ? ' selected' : '') + '>' + escapeHtml(e) + '</option>'; }).join("") +
             '</select></div>' +
             '<div><label>Produto</label><select id="f-produto">' +
-            '<option value="">—</option>' +
-            '<option value="obra_andamento"' + (l.produto === "obra_andamento" ? " selected" : "") + '>Obra em andamento</option>' +
-            '<option value="obra_finalizada"' + (l.produto === "obra_finalizada" ? " selected" : "") + '>Obra finalizada</option>' +
+            '<option value="">—</option>' + optsProdutos(l.produto) +
             '</select></div></div>';
     html += '<div class="field-row"><div><label>Valor potencial (R$)</label><input type="number" step="0.01" id="f-valor" value="' + escapeHtml(l.valor_potencial) + '"/></div>' +
             '<div><label>Responsável</label><input type="text" id="f-resp" value="' + escapeHtml(l.responsavel) + '"/></div></div>';
     html += '<div class="field-row single"><div><label>Observações</label><textarea id="f-obs">' + escapeHtml(l.observacoes || "") + '</textarea></div></div>';
     html += '</div>';
 
-    if (l.inss_direto || l.inss_reduzido) {
-      html += '<div class="detail-card"><h3>Resultado da calculadora</h3>';
+    // === Dados da Obra (editáveis) ===
+    html += '<div class="detail-card"><h3>Dados da Obra (do simulador)</h3>';
+    html += '<div class="field-row">' +
+            '<div><label>Responsável (PF/PJ)</label><select id="f-resp2"><option value="">—</option>' +
+              ['Pessoa Física','Pessoa Jurídica'].map(function (x) { return '<option' + (l.resp === x ? ' selected' : '') + '>' + x + '</option>'; }).join("") +
+            '</select></div>' +
+            '<div><label>Destinação</label><select id="f-dest"><option value="">—</option>' +
+              ['Residencial Unifamiliar','Residencial Multifamiliar','Casa Popular','Comercial Salas/Lojas','Conj. Hab. Popular','Galpão Ind.','Edifício de Garagens']
+                .map(function (x) { return '<option' + (l.dest === x ? ' selected' : '') + '>' + x + '</option>'; }).join("") +
+            '</select></div></div>';
+    html += '<div class="field-row">' +
+            '<div><label>Tipo de obra</label><select id="f-tipo"><option value="">—</option>' +
+              ['Alvenaria','Mista','Madeira'].map(function (x) { return '<option' + (l.tipo === x ? ' selected' : '') + '>' + x + '</option>'; }).join("") +
+            '</select></div>' +
+            '<div><label>Categoria</label><select id="f-categoria"><option value="">—</option>' +
+              ['Obra Nova','Acréscimo','Reforma','Demolição'].map(function (x) { return '<option' + (l.categoria === x ? ' selected' : '') + '>' + x + '</option>'; }).join("") +
+            '</select></div></div>';
+    html += '<div class="field-row">' +
+            '<div><label>Concreto usinado / pré-fabricado</label><select id="f-concreto"><option value="">—</option>' +
+              ['Sim','Não'].map(function (x) { return '<option' + (l.concreto === x ? ' selected' : '') + '>' + x + '</option>'; }).join("") +
+            '</select></div>' +
+            '<div></div></div>';
+    html += '<div class="field-row">' +
+            '<div><label>Área construção (m²)</label><input type="number" step="0.01" id="f-aconstr" value="' + escapeHtml(l.a_construcao || 0) + '"/></div>' +
+            '<div><label>Área reforma (m²)</label><input type="number" step="0.01" id="f-aref" value="' + escapeHtml(l.a_reforma || 0) + '"/></div></div>';
+    html += '<div class="field-row">' +
+            '<div><label>Área demolição (m²)</label><input type="number" step="0.01" id="f-ademo" value="' + escapeHtml(l.a_demolicao || 0) + '"/></div>' +
+            '<div><label>Piscina coberta (m²)</label><input type="number" step="0.01" id="f-apcob" value="' + escapeHtml(l.a_pcoberta || 0) + '"/></div></div>';
+    html += '<div class="field-row">' +
+            '<div><label>Piscina descoberta (m²)</label><input type="number" step="0.01" id="f-apdesc" value="' + escapeHtml(l.a_pdescoberta || 0) + '"/></div>' +
+            '<div><label>Área total (m²)</label><input type="number" step="0.01" id="f-atot" value="' + escapeHtml(l.area_total || 0) + '" readonly style="background:#f1f5f9;"/></div></div>';
+    html += '</div>';
+
+    // === Cálculos do Simulador (somente leitura, mas editáveis pra admins ajustarem) ===
+    if (l.inss_direto || l.inss_reduzido || l.vau) {
+      html += '<div class="detail-card"><h3>Cálculos do Simulador</h3>';
       var inssDir = parseFloat(l.inss_direto) || 0;
       var inssRed = parseFloat(l.inss_reduzido) || 0;
       var econ = parseFloat(l.economia) || 0;
       html += '<div class="field-row">' +
-              '<div><label>Imposto direto</label><div><strong>R$ ' + inssDir.toLocaleString("pt-BR",{minimumFractionDigits:2}) + '</strong></div></div>' +
-              '<div><label>Imposto reduzido</label><div><strong style="color:var(--success)">R$ ' + inssRed.toLocaleString("pt-BR",{minimumFractionDigits:2}) + '</strong></div></div></div>';
-      if (econ) {
-        var econPct = inssDir > 0 ? Math.round((econ / inssDir) * 100) : 0;
-        html += '<div class="field-row single"><div><label>Economia estimada</label><strong>R$ ' + econ.toLocaleString("pt-BR",{minimumFractionDigits:2}) + ' (' + econPct + '%)</strong></div></div>';
-      }
+              '<div><label>VAU (R$/m²)</label><input type="number" step="0.01" id="f-vau" value="' + escapeHtml(l.vau || 0) + '"/></div>' +
+              '<div><label>Custo da Obra — CO (R$)</label><input type="number" step="0.01" id="f-co" value="' + escapeHtml(l.co || 0) + '"/></div></div>';
+      html += '<div class="field-row">' +
+              '<div><label>RMT (R$)</label><input type="number" step="0.01" id="f-rmt" value="' + escapeHtml(l.rmt || 0) + '"/></div>' +
+              '<div><label>CMO (%)</label><input type="number" step="0.01" id="f-cmo" value="' + escapeHtml(l.cmo_pct || 0) + '"/></div></div>';
+      html += '<div class="field-row">' +
+              '<div><label>% Categoria</label><input type="number" step="0.01" id="f-pctcat" value="' + escapeHtml(l.pct_categoria || 0) + '"/></div>' +
+              '<div><label>Fator Social (%)</label><input type="number" step="0.01" id="f-fs" value="' + escapeHtml(l.fator_social_pct || "") + '"/></div></div>';
+      html += '<div class="field-row">' +
+              '<div><label>Alíquota total (%)</label><input type="number" step="0.001" id="f-aliq" value="' + escapeHtml(l.aliquota_pct || 0) + '"/></div>' +
+              '<div><label>Redução pré-fab (%)</label><input type="number" step="0.01" id="f-redpf" value="' + escapeHtml(l.reducao_pre_fab_pct || 0) + '"/></div></div>';
+      html += '<hr style="margin:14px 0;border:none;border-top:1px solid var(--border)">';
+      html += '<div class="field-row">' +
+              '<div><label>Imposto direto (R$)</label><input type="number" step="0.01" id="f-inssdir" value="' + escapeHtml(l.inss_direto || 0) + '"/></div>' +
+              '<div><label>Imposto reduzido (R$)</label><input type="number" step="0.01" id="f-inssred" value="' + escapeHtml(l.inss_reduzido || 0) + '"/></div></div>';
+      var econPct = inssDir > 0 ? Math.round((econ / inssDir) * 100) : 0;
+      html += '<div class="field-row single"><div><label>Economia (R$)</label><input type="number" step="0.01" id="f-econ" value="' + escapeHtml(l.economia || 0) + '"/> <small class="muted">' + econPct + '% de economia</small></div></div>';
       html += '</div>';
     }
 
@@ -780,7 +839,7 @@ var leadDetailView = {
     saveBtn.onclick = async function () {
       saveBtn.disabled = true;
       try {
-        await api.call("leads.update", {
+        var payload = {
           id: l.id,
           nome: $("f-nome").value.trim(),
           ddd: $("f-ddd").value.replace(/\D/g, ""),
@@ -793,7 +852,32 @@ var leadDetailView = {
           valor_potencial: parseFloat($("f-valor").value) || 0,
           responsavel: $("f-resp").value.trim(),
           observacoes: $("f-obs").value,
-        });
+        };
+        // Dados da Obra (se a seção foi renderizada)
+        if ($("f-resp2"))     payload.resp = $("f-resp2").value;
+        if ($("f-dest"))      payload.dest = $("f-dest").value;
+        if ($("f-tipo"))      payload.tipo = $("f-tipo").value;
+        if ($("f-categoria")) payload.categoria = $("f-categoria").value;
+        if ($("f-concreto"))  payload.concreto = $("f-concreto").value;
+        if ($("f-aconstr"))   payload.a_construcao = parseFloat($("f-aconstr").value) || 0;
+        if ($("f-aref"))      payload.a_reforma = parseFloat($("f-aref").value) || 0;
+        if ($("f-ademo"))     payload.a_demolicao = parseFloat($("f-ademo").value) || 0;
+        if ($("f-apcob"))     payload.a_pcoberta = parseFloat($("f-apcob").value) || 0;
+        if ($("f-apdesc"))    payload.a_pdescoberta = parseFloat($("f-apdesc").value) || 0;
+        if ($("f-atot"))      payload.area_total = parseFloat($("f-atot").value) || 0;
+        // Cálculos (se a seção foi renderizada)
+        if ($("f-vau"))     payload.vau = parseFloat($("f-vau").value) || 0;
+        if ($("f-co"))      payload.co = parseFloat($("f-co").value) || 0;
+        if ($("f-rmt"))     payload.rmt = parseFloat($("f-rmt").value) || 0;
+        if ($("f-cmo"))     payload.cmo_pct = parseFloat($("f-cmo").value) || 0;
+        if ($("f-pctcat"))  payload.pct_categoria = parseFloat($("f-pctcat").value) || 0;
+        if ($("f-fs") && $("f-fs").value !== "") payload.fator_social_pct = parseFloat($("f-fs").value);
+        if ($("f-aliq"))    payload.aliquota_pct = parseFloat($("f-aliq").value) || 0;
+        if ($("f-redpf"))   payload.reducao_pre_fab_pct = parseFloat($("f-redpf").value) || 0;
+        if ($("f-inssdir")) payload.inss_direto = parseFloat($("f-inssdir").value) || 0;
+        if ($("f-inssred")) payload.inss_reduzido = parseFloat($("f-inssred").value) || 0;
+        if ($("f-econ"))    payload.economia = parseFloat($("f-econ").value) || 0;
+        await api.call("leads.update", payload);
         toast("Lead salvo.", "success");
         leadsStore.refresh(true);
         leadDetailView.render(l.id);
@@ -830,7 +914,7 @@ var modalLead = {
     html += '<div class="field-row"><div><label>UF</label><input type="text" id="m-uf" maxlength="2"/></div>' +
             '<div><label>Cidade</label><input type="text" id="m-cidade"/></div></div>';
     html += '<div class="field-row"><div><label>Produto</label><select id="m-produto">' +
-            '<option value="">—</option><option value="obra_andamento">Obra em andamento</option><option value="obra_finalizada">Obra finalizada</option>' +
+            '<option value="">—</option>' + optsProdutos("") +
             '</select></div>' +
             '<div><label>Valor potencial (R$)</label><input type="number" step="0.01" id="m-valor"/></div></div>';
     html += '<div class="field-row single"><div><label>Observações</label><textarea id="m-obs"></textarea></div></div>';
@@ -1356,10 +1440,7 @@ var modalContrato = {
 
     html += '<div class="field-3">' +
       '<div><label>Número</label><input type="text" id="mc-numero" value="' + escapeHtml(c.numero) + '" placeholder="auto"/></div>' +
-      '<div><label>Produto</label><select id="mc-produto">' +
-        '<option value="obra_andamento"' + (c.produto === "obra_andamento" ? " selected" : "") + '>Obra em andamento</option>' +
-        '<option value="obra_finalizada"' + (c.produto === "obra_finalizada" ? " selected" : "") + '>Obra finalizada</option>' +
-      '</select></div>' +
+      '<div><label>Produto</label><select id="mc-produto">' + optsProdutos(c.produto) + '</select></div>' +
       '<div><label>Status</label><select id="mc-status">' +
         ['rascunho','assinado','em_execucao','concluido','cancelado'].map(function (s) {
           return '<option' + (c.status === s ? " selected" : "") + ' value="' + s + '">' + s + '</option>';
@@ -1441,7 +1522,7 @@ var modalContrato = {
 // ENTREGA 5 — DASHBOARD GERENCIAL
 // ============================================================
 var dashboardView = {
-  filtros: { periodo: "30d" },  // 30d / 90d / ano / tudo
+  filtros: { periodo: "30d" },
   charts: {},
 
   render: function () {
@@ -1519,7 +1600,6 @@ var dashboardView = {
 
     $("dash-content").innerHTML = html;
 
-    // Destruir charts antigos
     Object.keys(dashboardView.charts).forEach(function (k) {
       try { dashboardView.charts[k].destroy(); } catch (_) {}
     });
@@ -1527,11 +1607,10 @@ var dashboardView = {
 
     if (!window.Chart) {
       $("dash-content").insertAdjacentHTML("beforeend",
-        '<div class="placeholder">Chart.js não carregou. Confira sua conexão.</div>');
+        '<div class="placeholder">Chart.js não carregou.</div>');
       return;
     }
 
-    // Funil (barra horizontal)
     dashboardView.charts.funil = new Chart($("ch-funil"), {
       type: "bar",
       data: {
@@ -1545,7 +1624,6 @@ var dashboardView = {
       options: { indexAxis: "y", plugins: { legend: { display: false } }, responsive: true, maintainAspectRatio: false }
     });
 
-    // Por mês (linha)
     var mesesKeys = Object.keys(d.por_mes).sort();
     dashboardView.charts.mes = new Chart($("ch-mes"), {
       type: "line",
@@ -1563,7 +1641,6 @@ var dashboardView = {
       options: { plugins: { legend: { display: false } }, responsive: true, maintainAspectRatio: false }
     });
 
-    // Por estado
     var ufKeys = Object.keys(d.por_uf).sort(function (a, b) { return d.por_uf[b] - d.por_uf[a]; }).slice(0, 12);
     dashboardView.charts.uf = new Chart($("ch-uf"), {
       type: "bar",
@@ -1578,7 +1655,6 @@ var dashboardView = {
       options: { plugins: { legend: { display: false } }, responsive: true, maintainAspectRatio: false }
     });
 
-    // Por produto (donut)
     var prodKeys = Object.keys(d.por_produto);
     dashboardView.charts.prod = new Chart($("ch-prod"), {
       type: "doughnut",
@@ -1592,7 +1668,6 @@ var dashboardView = {
       options: { responsive: true, maintainAspectRatio: false }
     });
 
-    // Origem (donut)
     var origKeys = Object.keys(d.por_origem);
     dashboardView.charts.origem = new Chart($("ch-origem"), {
       type: "doughnut",
@@ -1606,7 +1681,6 @@ var dashboardView = {
       options: { responsive: true, maintainAspectRatio: false }
     });
 
-    // Conversão por mês (barra empilhada)
     dashboardView.charts.conv = new Chart($("ch-conv"), {
       type: "bar",
       data: {
@@ -1628,7 +1702,6 @@ function fmtBRLcompact(v) {
   return "R$ " + v.toFixed(2).replace(".", ",");
 }
 
-// Hook adicional no afterLogin: carregar clientes tambem
 var _afterLoginPrev = auth.afterLogin;
 auth.afterLogin = function () {
   _afterLoginPrev();
