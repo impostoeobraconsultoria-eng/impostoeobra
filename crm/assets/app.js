@@ -249,6 +249,7 @@ var views = {
     var id = (location.hash || "").split("/")[1];
     clienteDetailView.render(id);
   },
+  dashboard() { dashboardView.render(); },
   config() {
     views._configRender();
   },
@@ -1434,6 +1435,198 @@ var modalContrato = {
     }
   }
 };
+
+
+// ============================================================
+// ENTREGA 5 — DASHBOARD GERENCIAL
+// ============================================================
+var dashboardView = {
+  filtros: { periodo: "30d" },  // 30d / 90d / ano / tudo
+  charts: {},
+
+  render: function () {
+    var f = dashboardView.filtros;
+    var hoje = new Date();
+    var de = "";
+    if (f.periodo === "30d") {
+      var d30 = new Date(); d30.setDate(d30.getDate() - 30);
+      de = d30.toISOString().substring(0, 10);
+    } else if (f.periodo === "90d") {
+      var d90 = new Date(); d90.setDate(d90.getDate() - 90);
+      de = d90.toISOString().substring(0, 10);
+    } else if (f.periodo === "ano") {
+      de = hoje.getFullYear() + "-01-01";
+    }
+
+    var html = '<div class="dash-toolbar">' +
+      '<label style="font-size:12px;font-weight:600">Período:</label>' +
+      '<select id="dash-periodo">' +
+        '<option value="30d"' + (f.periodo === "30d" ? " selected" : "") + '>Últimos 30 dias</option>' +
+        '<option value="90d"' + (f.periodo === "90d" ? " selected" : "") + '>Últimos 90 dias</option>' +
+        '<option value="ano"' + (f.periodo === "ano" ? " selected" : "") + '>Este ano</option>' +
+        '<option value="tudo"' + (f.periodo === "tudo" ? " selected" : "") + '>Tudo</option>' +
+      '</select>' +
+      '<button class="btn ghost" id="dash-refresh">↻ Atualizar</button>' +
+      '<span class="muted" id="dash-status" style="font-size:12px;">Carregando...</span>' +
+      '</div>';
+    html += '<div id="dash-content"></div>';
+    $("view").innerHTML = html;
+
+    $("dash-periodo").onchange = function (e) {
+      dashboardView.filtros.periodo = e.target.value;
+      dashboardView.render();
+    };
+    $("dash-refresh").onclick = function () { dashboardView.render(); };
+
+    dashboardView.carregar(de);
+  },
+
+  carregar: async function (de) {
+    try {
+      var data = await api.call("dashboard.kpis", { de: de });
+      $("dash-status").textContent = "Atualizado " + nowTxt();
+      dashboardView.draw(data);
+    } catch (e) {
+      $("dash-content").innerHTML = '<div class="placeholder"><h2>Erro</h2><p>' + escapeHtml(e.message || e) + '</p></div>';
+    }
+  },
+
+  draw: function (d) {
+    var c = d.cards;
+    var html = '<div class="kpi-grid">';
+    html += '<div class="kpi-card primary"><div class="lbl">Leads</div><div class="val">' + c.total_leads + '</div><div class="sub">no período</div></div>';
+    html += '<div class="kpi-card warning"><div class="lbl">Propostas Enviadas</div><div class="val">' + c.propostas + '</div></div>';
+    html += '<div class="kpi-card success"><div class="lbl">Fechados Ganhos</div><div class="val">' + c.ganhos + '</div><div class="sub">' + c.taxa_conversao + '% de conversão</div></div>';
+    html += '<div class="kpi-card danger"><div class="lbl">Perdidos / Sem retorno</div><div class="val">' + c.perdidos + '</div></div>';
+    html += '<div class="kpi-card"><div class="lbl">Ticket Médio</div><div class="val">' + fmtBRLcompact(c.ticket_medio) + '</div></div>';
+    html += '<div class="kpi-card success"><div class="lbl">Total Vendido</div><div class="val">' + fmtBRLcompact(c.total_vendido) + '</div><div class="sub">' + c.contratos_ativos + ' contratos ativos</div></div>';
+    html += '<div class="kpi-card primary"><div class="lbl">Total Pago</div><div class="val">' + fmtBRLcompact(c.total_pago) + '</div></div>';
+    var saldo = c.total_vendido - c.total_pago;
+    html += '<div class="kpi-card warning"><div class="lbl">A receber</div><div class="val">' + fmtBRLcompact(saldo) + '</div></div>';
+    html += '</div>';
+
+    html += '<div class="chart-grid">';
+    html += '<div class="chart-card"><h3>Funil Comercial</h3><canvas id="ch-funil"></canvas></div>';
+    html += '<div class="chart-card"><h3>Leads por Mês</h3><canvas id="ch-mes"></canvas></div>';
+    html += '<div class="chart-card"><h3>Por Estado (UF)</h3><canvas id="ch-uf"></canvas></div>';
+    html += '<div class="chart-card"><h3>Por Produto</h3><canvas id="ch-prod"></canvas></div>';
+    html += '</div>';
+
+    html += '<div class="chart-grid" style="margin-top:14px;">';
+    html += '<div class="chart-card"><h3>Origem dos Leads</h3><canvas id="ch-origem"></canvas></div>';
+    html += '<div class="chart-card"><h3>Conversão por Mês</h3><canvas id="ch-conv"></canvas></div>';
+    html += '</div>';
+
+    $("dash-content").innerHTML = html;
+
+    // Destruir charts antigos
+    Object.keys(dashboardView.charts).forEach(function (k) {
+      try { dashboardView.charts[k].destroy(); } catch (_) {}
+    });
+    dashboardView.charts = {};
+
+    if (!window.Chart) {
+      $("dash-content").insertAdjacentHTML("beforeend",
+        '<div class="placeholder">Chart.js não carregou. Confira sua conexão.</div>');
+      return;
+    }
+
+    // Funil (barra horizontal)
+    dashboardView.charts.funil = new Chart($("ch-funil"), {
+      type: "bar",
+      data: {
+        labels: d.funil.map(function (f) { return f.status; }),
+        datasets: [{
+          label: "Leads",
+          data: d.funil.map(function (f) { return f.count; }),
+          backgroundColor: ["#0071E3","#3b82f6","#6366f1","#a855f7","#ec4899","#16a34a","#dc2626","#64748b"],
+        }]
+      },
+      options: { indexAxis: "y", plugins: { legend: { display: false } }, responsive: true, maintainAspectRatio: false }
+    });
+
+    // Por mês (linha)
+    var mesesKeys = Object.keys(d.por_mes).sort();
+    dashboardView.charts.mes = new Chart($("ch-mes"), {
+      type: "line",
+      data: {
+        labels: mesesKeys,
+        datasets: [{
+          label: "Leads",
+          data: mesesKeys.map(function (k) { return d.por_mes[k].leads; }),
+          borderColor: "#0071E3",
+          backgroundColor: "rgba(0,113,227,.1)",
+          tension: 0.3,
+          fill: true,
+        }]
+      },
+      options: { plugins: { legend: { display: false } }, responsive: true, maintainAspectRatio: false }
+    });
+
+    // Por estado
+    var ufKeys = Object.keys(d.por_uf).sort(function (a, b) { return d.por_uf[b] - d.por_uf[a]; }).slice(0, 12);
+    dashboardView.charts.uf = new Chart($("ch-uf"), {
+      type: "bar",
+      data: {
+        labels: ufKeys,
+        datasets: [{
+          label: "Leads",
+          data: ufKeys.map(function (u) { return d.por_uf[u]; }),
+          backgroundColor: "#3AB97A",
+        }]
+      },
+      options: { plugins: { legend: { display: false } }, responsive: true, maintainAspectRatio: false }
+    });
+
+    // Por produto (donut)
+    var prodKeys = Object.keys(d.por_produto);
+    dashboardView.charts.prod = new Chart($("ch-prod"), {
+      type: "doughnut",
+      data: {
+        labels: prodKeys,
+        datasets: [{
+          data: prodKeys.map(function (p) { return d.por_produto[p]; }),
+          backgroundColor: ["#0071E3","#FFD439","#3AB97A","#a855f7","#ec4899"],
+        }]
+      },
+      options: { responsive: true, maintainAspectRatio: false }
+    });
+
+    // Origem (donut)
+    var origKeys = Object.keys(d.por_origem);
+    dashboardView.charts.origem = new Chart($("ch-origem"), {
+      type: "doughnut",
+      data: {
+        labels: origKeys,
+        datasets: [{
+          data: origKeys.map(function (o) { return d.por_origem[o]; }),
+          backgroundColor: ["#0071E3","#FFD439","#3AB97A","#a855f7"],
+        }]
+      },
+      options: { responsive: true, maintainAspectRatio: false }
+    });
+
+    // Conversão por mês (barra empilhada)
+    dashboardView.charts.conv = new Chart($("ch-conv"), {
+      type: "bar",
+      data: {
+        labels: mesesKeys,
+        datasets: [
+          { label: "Leads", data: mesesKeys.map(function (k) { return d.por_mes[k].leads; }), backgroundColor: "#3b82f6" },
+          { label: "Ganhos", data: mesesKeys.map(function (k) { return d.por_mes[k].ganhos; }), backgroundColor: "#16a34a" },
+        ]
+      },
+      options: { plugins: { legend: { position: "bottom" } }, responsive: true, maintainAspectRatio: false }
+    });
+  }
+};
+
+function fmtBRLcompact(v) {
+  v = parseFloat(v) || 0;
+  if (v >= 1000000) return "R$ " + (v / 1000000).toFixed(2).replace(".", ",") + " mi";
+  if (v >= 1000) return "R$ " + (v / 1000).toFixed(1).replace(".", ",") + "k";
+  return "R$ " + v.toFixed(2).replace(".", ",");
+}
 
 // Hook adicional no afterLogin: carregar clientes tambem
 var _afterLoginPrev = auth.afterLogin;
