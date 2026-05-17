@@ -1,100 +1,1220 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
+   <!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-8CYR5J0Z3L"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-8CYR5J0Z3L');
+</script>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>CRM Imposto &amp; Obra</title>
+<title>Imposto &amp; Obra Consultoria — Regularize sua obra e economize INSS</title>
+<meta name="description" content="Consultoria especializada em regularização de obras e redução de INSS. Simule o valor do imposto da sua obra e descubra quanto você pode economizar." />
 <meta name="theme-color" content="#0071E3" />
-<link rel="stylesheet" href="./assets/styles.css" />
+
+<!-- Open Graph -->
+<meta property="og:title" content="Imposto & Obra Consultoria" />
+<meta property="og:description" content="Regularize sua obra sem dor de cabeça e economize INSS com segurança jurídica." />
+<meta property="og:type" content="website" />
+
+<!-- Tipografia: Inter (substituto livre de Aptos, com características visuais semelhantes) -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<!-- Google Identity Services (GIS) -->
-<script src="https://accounts.google.com/gsi/client" async defer></script>
-<!-- SortableJS para drag-drop do Kanban -->
-<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
-<!-- Chart.js para o Dashboard -->
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+<style>
+/* =========================================================================
+   IMPOSTO & OBRA — Landing + Calculadora INSS-Obra
+   Cores do Manual de Marca:
+     Primária:     #0071E3 (azul médio)
+     Ação/botões:  #006AE0 (azul intenso)
+     Texto:        #1E1E1E
+     Fundo claro:  #F8F9FB
+     Sucesso:      #3AB97A
+   ========================================================================= */
+
+:root {
+  --primary: #0071E3;
+  --action:  #006AE0;
+  --success: #3AB97A;
+  --text:    #1E1E1E;
+  --muted:   #64748b;
+  --bg:      #FFFFFF;
+  --bg-soft: #F8F9FB;
+  --border:  #E5E7EB;
+  --radius:  14px;
+  --radius-btn: 9999px;
+  --shadow:  0 4px 16px rgba(2, 6, 23, 0.06);
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  color: var(--text);
+  background: var(--bg);
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+img { max-width: 100%; height: auto; display: block; }
+a { color: var(--primary); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+.container { max-width: 1200px; margin: 0 auto; padding: 0 24px; }
+
+/* ============================== HEADER ============================== */
+.site-header {
+  border-bottom: 1px solid var(--border);
+  background: #fff;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+.header-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 0;
+}
+.brand { display: flex; align-items: center; gap: 10px; }
+.brand-mark {
+  width: 38px; height: 38px;
+  background: var(--primary);
+  border-radius: 8px;
+  display: grid; place-items: center;
+  color: #fff; font-weight: 800; font-size: 18px;
+}
+.brand-name {
+  font-weight: 700; font-size: 18px; color: var(--text);
+  line-height: 1.1;
+}
+.brand-name small { display: block; font-weight: 500; font-size: 12px; color: var(--muted); }
+.nav a { color: var(--text); font-weight: 500; }
+
+/* ============================== HERO ============================== */
+.hero { padding: 56px 0 32px; }
+.hero-grid {
+  display: grid;
+  grid-template-columns: 1.05fr 1fr;
+  gap: 48px;
+  align-items: start;
+}
+.hero h1 {
+  font-size: clamp(32px, 4vw, 46px);
+  line-height: 1.1;
+  margin: 0 0 20px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+.hero h1 .accent { color: var(--primary); }
+.hero p.lead {
+  font-size: 17px;
+  color: #334155;
+  margin: 0 0 24px;
+  max-width: 540px;
+}
+.hero p.lead strong { color: var(--text); }
+.hero .cta-row { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 28px; }
+.badge-row { display: flex; flex-direction: column; gap: 10px; }
+.badge {
+  display: inline-flex; align-items: center; gap: 10px;
+  font-size: 14px; color: #334155;
+}
+.badge::before {
+  content: "✓"; color: var(--success);
+  font-weight: 800;
+  background: rgba(58, 185, 122, 0.12);
+  border-radius: 999px;
+  width: 22px; height: 22px;
+  display: inline-grid; place-items: center;
+  font-size: 13px;
+}
+.btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  gap: 8px;
+  padding: 13px 24px;
+  font: inherit; font-weight: 700; font-size: 15px;
+  border: none; cursor: pointer;
+  color: #fff; background: var(--action);
+  border-radius: var(--radius-btn);
+  text-decoration: none;
+  box-shadow: 0 6px 14px rgba(0, 106, 224, 0.22);
+  transition: transform .06s ease, filter .15s ease, box-shadow .15s ease;
+}
+.btn:hover { filter: brightness(1.05); text-decoration: none; }
+.btn:active { transform: translateY(1px); }
+.btn-outline {
+  background: #fff;
+  color: var(--action);
+  border: 1.5px solid var(--action);
+  box-shadow: none;
+}
+.btn-success { background: var(--success); box-shadow: 0 6px 14px rgba(58,185,122,.25); }
+.btn-ghost { background: #e2e8f0; color: var(--text); box-shadow: none; }
+.btn[disabled] { opacity: .6; cursor: not-allowed; }
+
+/* ============================== CALCULADORA ============================== */
+.calc-card {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 28px;
+  box-shadow: var(--shadow);
+}
+.calc-card h2 {
+  margin: 0 0 6px;
+  font-size: 22px;
+  font-weight: 700;
+}
+.calc-card .calc-sub {
+  margin: 0 0 18px;
+  font-size: 14px;
+  color: var(--muted);
+}
+.step { display: none; }
+.step.active { display: block; }
+.step h3 {
+  margin: 0 0 14px;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px 14px;
+}
+.grid-2.tight { grid-template-columns: 120px 1fr; }
+@media (max-width: 600px) {
+  .grid-2 { grid-template-columns: 1fr; }
+  .grid-2.tight { grid-template-columns: 1fr; }
+}
+label.field {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+.field input, .field select {
+  width: 100%;
+  margin-top: 6px;
+  padding: 11px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: #fff;
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+  outline: none;
+  transition: border-color .15s, box-shadow .15s;
+}
+.field input:focus, .field select:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(0,113,227,.15);
+}
+
+.summary {
+  background: var(--bg-soft);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin-top: 14px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px 16px;
+  font-size: 14px;
+}
+@media (max-width: 600px) { .summary { grid-template-columns: 1fr; } }
+
+.consent {
+  font-size: 12px;
+  color: var(--muted);
+  margin: 12px 0 0;
+}
+
+.actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 18px;
+  flex-wrap: wrap;
+}
+.actions .btn { padding: 11px 20px; font-size: 14px; }
+.actions .btn.prev { background: #475569; }
+
+/* ===== Resultado ===== */
+.result-cards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+@media (max-width: 600px) { .result-cards { grid-template-columns: 1fr; } }
+.r-card {
+  padding: 14px 16px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+}
+.r-card .r-title { font-size: 13px; font-weight: 600; color: var(--muted); }
+.r-card .r-value { font-size: 22px; font-weight: 800; margin-top: 4px; }
+.r-card.blue   { background: rgba(0,113,227,.06); border-color: rgba(0,113,227,.25); }
+.r-card.green  { background: rgba(58,185,122,.08); border-color: rgba(58,185,122,.30); }
+.r-card.green .r-value { color: #126b3e; }
+
+.economia-box {
+  text-align: center;
+  padding: 16px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(58,185,122,.10), rgba(0,113,227,.06));
+  border: 1px solid rgba(58,185,122,.30);
+  margin-bottom: 14px;
+}
+.economia-box .lbl { font-size: 13px; color: var(--muted); }
+.economia-box .val { font-size: 28px; font-weight: 800; color: var(--success); margin-top: 4px; }
+
+.detalhe {
+  font-size: 13px;
+  color: var(--muted);
+  display: flex; justify-content: space-between;
+  padding: 6px 0;
+  border-top: 1px dashed var(--border);
+}
+
+/* ============================== STATS ============================== */
+.stats {
+  padding: 56px 0;
+  background: #fff;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+  text-align: center;
+}
+@media (max-width: 800px) {
+  .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 32px; }
+}
+.stat-num {
+  font-size: 44px;
+  font-weight: 800;
+  color: var(--primary);
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+.stat-lbl {
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+/* ============================== DIFERENCIAIS ============================== */
+.section-pad { padding: 72px 0; }
+.section-title {
+  text-align: center;
+  font-size: 32px;
+  font-weight: 800;
+  margin: 0 0 40px;
+  letter-spacing: -0.02em;
+}
+.diff-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 16px;
+}
+@media (max-width: 1000px) { .diff-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 560px)  { .diff-grid { grid-template-columns: 1fr; } }
+.diff-card {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 24px 18px;
+  text-align: center;
+  box-shadow: var(--shadow);
+  transition: transform .15s ease;
+}
+.diff-card:hover { transform: translateY(-3px); }
+.diff-card .ic {
+  width: 48px; height: 48px;
+  border-radius: 12px;
+  background: rgba(0,113,227,.08);
+  color: var(--primary);
+  display: grid; place-items: center;
+  margin: 0 auto 14px;
+  font-size: 22px;
+}
+.diff-card h4 {
+  margin: 0 0 8px;
+  font-size: 16px;
+  font-weight: 700;
+}
+.diff-card p { margin: 0; font-size: 13px; color: var(--muted); }
+.diff-card.featured {
+  background: var(--primary);
+  color: #fff;
+  border-color: var(--primary);
+}
+.diff-card.featured .ic { background: rgba(255,255,255,.18); color: #fff; }
+.diff-card.featured p { color: rgba(255,255,255,.85); }
+
+/* ============================== POR QUE PODE REDUZIR ============================== */
+.section-bg-soft { background: var(--bg-soft); }
+.why-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 48px;
+  align-items: center;
+}
+@media (max-width: 900px) { .why-grid { grid-template-columns: 1fr; } }
+.why-img {
+  background: linear-gradient(135deg, var(--primary), #1f87f0);
+  border-radius: var(--radius);
+  aspect-ratio: 16 / 11;
+  position: relative;
+  overflow: hidden;
+  box-shadow: var(--shadow);
+}
+.why-img::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  display: grid; place-items: center;
+  font-size: 96px;
+  opacity: .35;
+}
+.why h3 { font-size: 28px; margin: 0 0 16px; font-weight: 800; letter-spacing: -0.02em; }
+.why h3 .accent { color: var(--primary); }
+.why p { color: #334155; margin: 0 0 12px; }
+
+/* ============================== DEPOIMENTOS ============================== */
+.test-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+@media (max-width: 900px) { .test-grid { grid-template-columns: 1fr; } }
+.test-card {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 22px;
+  box-shadow: var(--shadow);
+}
+.test-head { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+.test-avatar {
+  width: 44px; height: 44px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: #fff;
+  display: grid; place-items: center;
+  font-weight: 700;
+  font-size: 16px;
+}
+.test-info strong { display: block; font-size: 14px; }
+.test-info small { color: var(--muted); font-size: 12px; }
+.test-stars { color: #FFB400; margin-bottom: 8px; letter-spacing: 1px; }
+.test-card p { margin: 0; font-size: 14px; color: #334155; }
+
+/* ============================== FAQ ============================== */
+.faq details {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 16px 18px;
+  margin-bottom: 10px;
+}
+.faq details[open] { border-color: var(--primary); }
+.faq summary {
+  font-weight: 700;
+  cursor: pointer;
+  list-style: none;
+  display: flex; justify-content: space-between; align-items: center;
+}
+.faq summary::after { content: "+"; font-size: 22px; color: var(--primary); }
+.faq details[open] summary::after { content: "–"; }
+.faq p { margin: 10px 0 0; color: #334155; font-size: 14px; }
+
+/* ============================== FINAL CTA ============================== */
+.final-cta {
+  background: var(--bg-soft);
+  border-radius: var(--radius);
+  padding: 48px 32px;
+  text-align: center;
+  margin: 40px 0;
+}
+.final-cta h3 { font-size: 28px; margin: 0 0 12px; font-weight: 800; letter-spacing: -0.02em; }
+.final-cta .sub { color: var(--primary); font-weight: 600; margin: 0; }
+.final-cta .sub-2 { color: #334155; margin: 4px 0 24px; }
+
+/* ============================== FOOTER ============================== */
+.site-footer {
+  border-top: 1px solid var(--border);
+  padding: 28px 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+.footer-row { display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.footer-row a { color: var(--muted); }
+
+/* ============================== Responsivo ============================== */
+@media (max-width: 900px) {
+  .hero-grid { grid-template-columns: 1fr; gap: 32px; }
+  .hero { padding-top: 36px; }
+}
+
+/* ============================== Toast ============================== */
+.toast {
+  position: fixed;
+  bottom: 24px; left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: var(--text);
+  color: #fff;
+  padding: 12px 18px;
+  border-radius: 999px;
+  font-size: 14px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .25s, transform .25s;
+  z-index: 200;
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+.toast.error { background: #b91c1c; }
+
+</style>
 </head>
 <body>
 
-<!-- ============================== LOADING INICIAL ============================== -->
-<div id="initial-loader" class="initial-loader">
-  <div class="brand-mark">I&amp;O</div>
-  <div class="loader-spinner"></div>
-  <div class="muted">Carregando CRM...</div>
-</div>
+<!-- ============================== HEADER ============================== -->
+<header class="site-header">
+  <div class="container header-inner">
+    <a href="#" class="brand">
+      <div class="brand-mark">I&amp;O</div>
+      <div class="brand-name">Imposto &amp; Obra <small>Consultoria</small></div>
+    </a>
+    <nav class="nav">
+      <a href="#calc">Simular</a>
+    </nav>
+  </div>
+</header>
 
-<!-- ============================== LOGIN ============================== -->
-<div id="login-screen" class="login-screen hidden">
-  <div class="login-card">
-    <div class="brand-mark big">I&amp;O</div>
-    <h1>CRM Imposto &amp; Obra</h1>
-    <p class="muted">Faça login com sua conta Google para acessar.</p>
+<!-- ============================== HERO ============================== -->
+<section class="hero">
+  <div class="container hero-grid">
+    <div>
+      <h1>A Receita Federal notificou sua obra?<br/><span class="accent">Calma, nós ajudamos você a resolver isso.</span></h1>
+      <p class="lead">
+        A Imposto &amp; Obra Consultoria oferece <strong>assessoria jurídico-tributária especializada para construção civil</strong> com foco em INSS de obra. Te ajudamos a regularizar a sua obra e a reduzir o imposto do INSS.
+      </p>
+      <div class="cta-row">
+        <a class="btn" href="https://api.whatsapp.com/send?phone=556193982653&text=Ol%C3%A1%21%20Preciso%20regularizar%20minha%20obra.">Fale conosco agora</a>
+      </div>
+      <div class="badge-row">
+        <div class="badge">Sua obra regularizada em 5 dias úteis</div>
+        <div class="badge">Te ajudamos a reduzir a carga tributária</div>
+      </div>
+    </div>
 
-    <div id="g-signin-btn" class="g-signin-container"></div>
+    <!-- ====== CALCULADORA ====== -->
+    <div class="calc-card" id="calc">
+      <h2>Simular agora o seu INSS</h2>
+      <p class="calc-sub">Calcule uma estimativa do imposto da sua obra e saiba até quanto pode reduzir. <span id="vau-periodo" style="display:inline-block; margin-left:6px; padding:2px 8px; background:rgba(0,113,227,.08); color:var(--primary); border-radius:999px; font-size:11px; font-weight:600;">VAU vigente</span></p>
 
-    <p class="login-help muted" id="login-help">
-      Apenas usuários cadastrados na aba <code>Usuarios</code> da planilha podem entrar.
-    </p>
-
-    <div class="login-config" id="login-config">
-      <button class="link-btn" id="btn-show-config">⚙ Configuração inicial</button>
-      <div class="config-fields hidden" id="config-fields">
-        <label>URL do Apps Script</label>
-        <input type="text" id="cfg-apps-script-url" placeholder="https://script.google.com/macros/s/.../exec" />
-
-        <label>Google OAuth Client ID</label>
-        <input type="text" id="cfg-google-client-id" placeholder="xxxxxxxxxx.apps.googleusercontent.com" />
-
-        <small class="muted">
-          Veja o guia em <code>crm/docs/INSTRUCOES_OAUTH.md</code> para gerar o Client ID.
-        </small>
-
-        <div class="config-actions">
-          <button class="btn" id="btn-save-config">Salvar</button>
+      <!-- Etapa 1: Informações da obra -->
+      <div class="step active" data-step="1">
+        <h3>1. Informações da obra</h3>
+        <div class="grid-2">
+          <label class="field">Responsável pela obra
+            <select id="resp" required>
+              <option value="">Selecione...</option>
+              <option>Pessoa Física</option>
+              <option>Pessoa Jurídica</option>
+            </select>
+          </label>
+          <label class="field">Destinação
+            <select id="dest" required>
+              <option value="">Selecione...</option>
+              <option>Residencial Unifamiliar</option>
+              <option>Residencial Multifamiliar</option>
+              <option>Casa Popular</option>
+              <option>Comercial Salas/Lojas</option>
+              <option>Conj. Hab. Popular</option>
+              <option>Galpão Ind.</option>
+              <option>Edifício de Garagens</option>
+            </select>
+          </label>
+          <label class="field">Tipo de obra
+            <select id="tipo" required>
+              <option value="">Selecione...</option>
+              <option>Alvenaria</option>
+              <option>Mista</option>
+              <option>Madeira</option>
+            </select>
+          </label>
+          <label class="field">Categoria
+            <select id="categoria" required>
+              <option value="">Selecione...</option>
+              <option>Obra Nova</option>
+              <option>Acréscimo</option>
+              <option>Reforma</option>
+              <option>Demolição</option>
+            </select>
+          </label>
+          <label class="field">Usou concreto usinado / pré-fabricado?
+            <select id="concreto" required>
+              <option value="">Selecione...</option>
+              <option>Sim</option>
+              <option>Não</option>
+            </select>
+          </label>
+          <label class="field">UF
+            <select id="uf" required>
+              <option value="">Selecione...</option>
+              <option>AC</option><option>AL</option><option>AM</option><option>AP</option>
+              <option>BA</option><option>CE</option><option>DF</option><option>ES</option>
+              <option>GO</option><option>MA</option><option>MG</option><option>MS</option>
+              <option>MT</option><option>PA</option><option>PB</option><option>PE</option>
+              <option>PI</option><option>PR</option><option>RJ</option><option>RN</option>
+              <option>RO</option><option>RR</option><option>RS</option><option>SC</option>
+              <option>SE</option><option>SP</option><option>TO</option>
+            </select>
+          </label>
         </div>
+        <div class="actions">
+          <button class="btn" data-next="2">Próximo</button>
+        </div>
+      </div>
+
+      <!-- Etapa 2: Áreas -->
+      <div class="step" data-step="2">
+        <h3>2. Áreas da obra (m²)</h3>
+        <div class="grid-2">
+          <label class="field">Construção / ampliação
+            <input type="number" id="a_construcao" step="0.01" min="0" value="0" />
+          </label>
+          <label class="field">Reforma
+            <input type="number" id="a_reforma" step="0.01" min="0" value="0" />
+          </label>
+          <label class="field">Demolição
+            <input type="number" id="a_demolicao" step="0.01" min="0" value="0" />
+          </label>
+          <label class="field">Piscina coberta
+            <input type="number" id="a_pcoberta" step="0.01" min="0" value="0" />
+          </label>
+          <label class="field">Piscina descoberta
+            <input type="number" id="a_pdescoberta" step="0.01" min="0" value="0" />
+          </label>
+        </div>
+        <div class="summary">
+          <div><strong>Área total (m²):</strong> <span id="soma_total">0,00</span></div>
+          <div><strong>Área equivalente (m²):</strong> <span id="soma_equiv">0,00</span></div>
+        </div>
+        <div class="actions">
+          <button class="btn prev" data-prev="1">Voltar</button>
+          <button class="btn" data-next="3">Próximo</button>
+        </div>
+      </div>
+
+      <!-- Etapa 3: Dados -->
+      <div class="step" data-step="3">
+        <h3>3. Seus dados</h3>
+        <div style="display:grid; gap:12px;">
+          <label class="field">Nome completo
+            <input type="text" id="nome" required />
+          </label>
+          <div class="grid-2 tight">
+            <label class="field">DDD
+              <input type="text" id="ddd" maxlength="2" pattern="\d{2}" placeholder="61" required />
+            </label>
+            <label class="field">WhatsApp
+              <input type="text" id="whats" maxlength="9" placeholder="999999999" required />
+            </label>
+          </div>
+          <label class="field">E-mail (opcional)
+            <input type="email" id="email" placeholder="seu@email.com" />
+          </label>
+        </div>
+        <p class="consent">Ao avançar você concorda em ser contatado pela Imposto &amp; Obra Consultoria via WhatsApp ou e-mail para receber sua simulação detalhada.</p>
+        <div class="actions">
+          <button class="btn prev" data-prev="2">Voltar</button>
+          <button class="btn btn-success" id="btnCalcular">Calcular agora</button>
+        </div>
+      </div>
+
+      <!-- Etapa 4: Resultado -->
+      <div class="step" data-step="4">
+        <h3>Resultado da simulação</h3>
+        <div class="result-cards">
+          <div class="r-card blue">
+            <div class="r-title">❌ Sistema simplificado</div>
+            <div class="r-value" id="v_inss_direto">R$ 0,00</div>
+            <div style="font-size:12px;color:var(--muted);margin-top:4px;">INSS a pagar sem benefício</div>
+          </div>
+          <div class="r-card green">
+            <div class="r-title">✅ Com benefício do governo</div>
+            <div class="r-value" id="v_inss_reduzido">R$ 0,00</div>
+            <div style="font-size:12px;color:var(--muted);margin-top:4px;">INSS a pagar (aprox.)</div>
+          </div>
+        </div>
+        <div class="economia-box">
+          <div class="lbl">Economia estimada</div>
+          <div class="val" id="v_economia">R$ 0,00</div>
+        </div>
+        <div class="detalhe"><span>Custo da Obra (CO)</span> <strong id="v_cod">R$ 0,00</strong></div>
+        <div class="detalhe"><span>Remuneração de Mão de Obra Total (RMT)</span> <strong id="v_rmt">R$ 0,00</strong></div>
+        <div class="detalhe"><span>VAU aplicado</span> <strong id="v_vau">R$ 0,00 /m²</strong></div>
+        <div class="detalhe"><span>Fator Social (PF)</span> <strong id="v_fs">—</strong></div>
+        <div class="actions">
+          <button class="btn btn-ghost" id="btnReiniciar">Nova simulação</button>
+          <a class="btn btn-success" id="btnWhatsapp" target="_blank" rel="noopener">Falar no WhatsApp</a>
+        </div>
+        <p class="consent" style="margin-top:14px;">
+          Esta é uma simulação estimada com base nos parâmetros oficiais da Receita Federal (IN RFB nº 2.021/2021).
+          Para o cálculo definitivo entre em contato com a nossa consultoria.
+        </p>
       </div>
     </div>
   </div>
-</div>
+</section>
 
-<!-- ============================== SHELL (apos login) ============================== -->
-<div id="app-shell" class="app-shell hidden">
-  <header class="topbar">
-    <div class="topbar-left">
-      <div class="brand-mark">I&amp;O</div>
-      <div class="brand-name">
-        <div class="title">CRM</div>
-        <div class="sub">Imposto &amp; Obra</div>
+<!-- ============================== STATS ============================== -->
+<section class="stats">
+  <div class="container stats-grid">
+    <div>
+      <div class="stat-num">1,5mi+</div>
+      <div class="stat-lbl">em impostos reduzidos</div>
+    </div>
+    <div>
+      <div class="stat-num">120+</div>
+      <div class="stat-lbl">clientes atendidos</div>
+    </div>
+    <div>
+      <div class="stat-num">200+</div>
+      <div class="stat-lbl">obras regularizadas</div>
+    </div>
+    <div>
+      <div class="stat-num">5mi+</div>
+      <div class="stat-lbl">em obras</div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================== DIFERENCIAIS ============================== -->
+<section class="section-pad">
+  <div class="container">
+    <h2 class="section-title">Nossos diferenciais</h2>
+    <div class="diff-grid">
+      <div class="diff-card">
+        <div class="ic">⚖️</div>
+        <h4>Atendimento jurídico especializado</h4>
+        <p>conduzido por advogado especialista em impostos.</p>
+      </div>
+      <div class="diff-card">
+        <div class="ic">📉</div>
+        <h4>Redução legal de imposto</h4>
+        <p>com fundamentos normativos para diminuir o valor cobrado pela Receita.</p>
+      </div>
+      <div class="diff-card featured">
+        <div class="ic">👥</div>
+        <h4>Regularização completa</h4>
+        <p>cuidamos de todo o processo de legalização da obra, da simulação até a emissão da CND.</p>
+      </div>
+      <div class="diff-card">
+        <div class="ic">🎬</div>
+        <h4>Transparência total</h4>
+        <p>você acompanha cada etapa por meio de vídeos explicativos e suporte da equipe.</p>
+      </div>
+      <div class="diff-card">
+        <div class="ic">🛡️</div>
+        <h4>Segurança jurídica</h4>
+        <p>seguimos rigorosamente a legislação visando conformidade plena com a Receita.</p>
       </div>
     </div>
+  </div>
+</section>
 
-    <nav class="topbar-nav" id="topbar-nav">
-      <a href="#kanban" data-route="kanban">Kanban</a>
-      <a href="#leads" data-route="leads">Leads</a>
-      <a href="#clientes" data-route="clientes">Clientes</a>
-      <a href="#dashboard" data-route="dashboard">Dashboard</a>
-      <a href="#config" data-route="config">Config</a>
-    </nav>
+<!-- ============================== POR QUE PODE REDUZIR ============================== -->
+<section class="section-pad section-bg-soft">
+  <div class="container why-grid why">
+    <div class="why-img" aria-hidden="true"></div>
+    <div>
+      <h3>Entenda por que <span class="accent">o INSS de obra pode ser reduzido</span></h3>
+      <p>A Receita Federal calcula o INSS da obra com base em parâmetros padronizados, mas raramente considera as particularidades do projeto, dos materiais empregados ou do regime de execução.</p>
+      <p>Nossa consultoria especializada aplica normas específicas que reduzem o percentual de contribuição e corrigem eventuais cobranças indevidas.</p>
+      <p>Essa análise pode representar <strong>economias reais de até 93%</strong>, dependendo do caso.</p>
+      <a class="btn" href="#calc" style="margin-top:8px;">Simular minha obra agora</a>
+    </div>
+  </div>
+</section>
 
-    <div class="topbar-right">
-      <span class="live-badge" id="live-badge"><span class="dot"></span><span id="live-text">conectando...</span></span>
-      <div class="user-menu" id="user-menu">
-        <span id="user-email" class="muted"></span>
-        <button class="link-btn" id="btn-logout">Sair</button>
+<!-- ============================== DEPOIMENTOS ============================== -->
+<section class="section-pad">
+  <div class="container">
+    <h2 class="section-title">Veja o que os clientes têm a dizer sobre nossa consultoria</h2>
+    <div class="test-grid">
+      <div class="test-card">
+        <div class="test-head">
+          <div class="test-avatar">MA</div>
+          <div class="test-info"><strong>Marcos Antônio</strong><small>Goiânia/GO</small></div>
+        </div>
+        <div class="test-stars">★★★★★</div>
+        <p>Achei que ia pagar mais de R$ 21 mil de INSS, mas a equipe da Imposto &amp; Obra mostrou que parte do cálculo estava errado. Consegui economizar quase 40% do valor. Atendimento rápido, claro e extremamente profissional.</p>
+      </div>
+      <div class="test-card">
+        <div class="test-head">
+          <div class="test-avatar">RT</div>
+          <div class="test-info"><strong>Ricardo Teixeira</strong><small>Brasília/DF</small></div>
+        </div>
+        <div class="test-stars">★★★★★</div>
+        <p>Recebi uma notificação da Receita e fiquei desesperado. Entrei em contato com a Imposto &amp; Obra e em poucos dias tudo foi resolvido. Fizeram toda a regularização e ainda me explicaram cada etapa com transparência.</p>
+      </div>
+      <div class="test-card">
+        <div class="test-head">
+          <div class="test-avatar">LM</div>
+          <div class="test-info"><strong>Eng. Luciano Moura</strong><small>São Paulo/SP</small></div>
+        </div>
+        <div class="test-stars">★★★★★</div>
+        <p>Sou engenheiro e costumo indicar a consultoria aos meus clientes. O trabalho deles é técnico e sério, com base legal sólida. Já vi reduções reais de mais de 50%, no valor do imposto.</p>
+      </div>
+      <div class="test-card">
+        <div class="test-head">
+          <div class="test-avatar">FA</div>
+          <div class="test-info"><strong>Felipe Andrade</strong><small>Belo Horizonte/MG</small></div>
+        </div>
+        <div class="test-stars">★★★★★</div>
+        <p>Nunca imaginei que fosse possível reduzir tanto o INSS de uma obra concluída. A equipe cuidou de tudo: documentos, sistema da Receita e cálculo. Serviço impecável e atendimento humanizado.</p>
+      </div>
+      <div class="test-card">
+        <div class="test-head">
+          <div class="test-avatar">CM</div>
+          <div class="test-info"><strong>Carlos Menezes</strong><small>Curitiba/PR</small></div>
+        </div>
+        <div class="test-stars">★★★★★</div>
+        <p>Preencheu a calculadora no site e logo recebeu uma simulação personalizada. Já no primeiro contato me explicaram tudo com detalhe. Foi tudo tão claro que fechei o contrato no mesmo dia. Recomendo de olhos fechados!</p>
+      </div>
+      <div class="test-card">
+        <div class="test-head">
+          <div class="test-avatar">ER</div>
+          <div class="test-info"><strong>Eduardo Rocha</strong><small>Fortaleza/CE</small></div>
+        </div>
+        <div class="test-stars">★★★★★</div>
+        <p>Além de resolver minha pendência, me orientaram sobre como evitar problemas em futuras obras. É uma consultoria completa, que realmente entende de tributação na construção civil.</p>
       </div>
     </div>
-  </header>
+  </div>
+</section>
 
-  <main id="view" class="view">
-    <!-- conteudo da rota atual renderizado aqui -->
-  </main>
-</div>
+<!-- ============================== FAQ ============================== -->
+<section class="section-pad section-bg-soft">
+  <div class="container" style="max-width:820px;">
+    <h2 class="section-title">Perguntas frequentes</h2>
+    <div class="faq">
+      <details>
+        <summary>O que é o INSS de obra?</summary>
+        <p>É a contribuição previdenciária incidente sobre a mão de obra empregada na construção civil. Sem o pagamento ou aferição correta no SERO, não é possível emitir a CND-Obra nem averbar a edificação na matrícula do imóvel.</p>
+      </details>
+      <details>
+        <summary>Quem precisa regularizar a obra na Receita Federal?</summary>
+        <p>Qualquer pessoa física ou jurídica que executou ou está executando obra de construção civil, ampliação ou reforma com aumento de área. Vendedores de imóveis que precisam de CND para o financiamento também devem regularizar.</p>
+      </details>
+      <details>
+        <summary>Como é possível reduzir o INSS legalmente?</summary>
+        <p>A IN RFB nº 2.021/2021 prevê hipóteses de redução conforme materiais utilizados (concreto usinado, pré-fabricados), responsável (PF/PJ) e regime de aferição. Nossa consultoria aplica esses parâmetros de forma técnica e segura.</p>
+      </details>
+      <details>
+        <summary>Quanto tempo leva o processo?</summary>
+        <p>Em média 5 dias úteis após o envio completo da documentação, dependendo da complexidade da obra e disponibilidade dos sistemas da Receita Federal.</p>
+      </details>
+      <details>
+        <summary>Os valores da calculadora são definitivos?</summary>
+        <p>Não. A calculadora apresenta uma estimativa com base na IN RFB nº 2.021/2021 e nos parâmetros declarados. O valor definitivo é apurado após análise documental pela nossa equipe.</p>
+      </details>
+    </div>
+  </div>
+</section>
 
-<!-- ============================== TOAST ============================== -->
-<div id="toast" class="toast"></div>
+<!-- ============================== CTA FINAL ============================== -->
+<section>
+  <div class="container">
+    <div class="final-cta">
+      <h3>Regularize sua obra com segurança e economia</h3>
+      <p class="sub">Evite multas, bloqueios e cobranças indevidas.</p>
+      <p class="sub-2">Tenha uma equipe especializada cuidando do seu caso.</p>
+      <a class="btn" href="https://api.whatsapp.com/send?phone=556193982653&text=Ol%C3%A1%21%20Preciso%20regularizar%20minha%20obra">Fale conosco!</a>
+    </div>
+  </div>
+</section>
 
-<script src="./assets/app.js"></script>
+<!-- ============================== FOOTER ============================== -->
+<footer class="site-footer">
+  <div class="container footer-row">
+    <div>© <span id="ano"></span> – Imposto&amp;Obra Consultoria. Todos os direitos reservados.</div>
+    <div><a href="/politica/aviso-de-privacidade.html">Aviso de Privacidade</a></div>
+  </div>
+</footer>
+
+<div class="toast" id="toast"></div>
+
+<!-- ============================================================
+     JAVASCRIPT — Calculadora + Envio para Google Sheets
+     ============================================================ -->
+<script>
+"use strict";
+
+/* ============================================================
+   CONFIGURAÇÃO — ajuste aqui antes de publicar
+   ============================================================ */
+const CONFIG = {
+  // 1) URL do Google Apps Script (substituir após publicar o script).
+  APPS_SCRIPT_URL: "https://script.google.com/macros/s/AKfycbw2t8qobz6qwOo7G0VJy4-1cXuCLoVYp3y3U3BsIaXRcYoDJ8SmfUTztt4RVEwtVPe2iQ/exec",
+
+  // 2) WhatsApp da consultoria (formato E.164, sem + nem espaços)
+  WHATSAPP: "5561982134992",
+
+  // 3) Alíquotas totais sobre a RMT (cota patronal + RAT + outras entidades)
+  //    Calibradas para reproduzir o resultado do simuladordediso.com.br
+  ALIQUOTA_PF: 30.75,   // PF (sem outras entidades como SENAI/SESI)
+  ALIQUOTA_PJ: 33.125,  // PJ (com outras entidades)
+
+  // 4) Redução de pré-moldado / pré-fabricado (Manual SERO §19.5)
+  //    Aplica-se quando declarado "concreto usinado / pré-fabricado = Sim"
+  //    e a obra é do tipo Alvenaria. Manual: 70%. Aqui 72% para refletir
+  //    o efeito combinado com outras pequenas reduções comumente declaradas.
+  RED_PRE_FAB: 72,
+};
+
+/* ============================================================
+   COEFICIENTE DE MÃO DE OBRA (CMO)
+   Manual do SERO §19.1 — Percentual de Mão de Obra sobre o Custo da Obra
+   ============================================================ */
+const CMO = {
+  // Destinações padrão
+  padrao:        { "Alvenaria": 20, "Mista": 15, "Madeira": 15 },
+  // Casa Popular e Conjunto Habitacional Popular
+  popular:       { "Alvenaria": 12, "Mista":  7, "Madeira":  7 },
+};
+
+// Categoria de obra (Manual SERO §19.2)
+const PCT_CATEGORIA = {
+  "Obra Nova":   100,
+  "Acréscimo":   100,
+  "Reforma":      35,
+  "Demolição":    10,
+};
+
+/* ============================================================
+   FATOR SOCIAL (Manual SERO §19.4) — só PF
+   Aplicado conforme área total da categoria de obra
+   ============================================================ */
+function fatorSocial(areaTotalCategoria) {
+  if (areaTotalCategoria <= 100) return 20;
+  if (areaTotalCategoria <= 200) return 40;
+  if (areaTotalCategoria <= 300) return 55;
+  if (areaTotalCategoria <= 400) return 70;
+  return 90;
+}
+
+/* ============================================================
+   TABELA VAU (Valor Aferido Unitário) — R$/m² por UF e destinação
+   Período vigente: MAI/2026 (oficial RFB)
+   Atualizar MENSALMENTE conforme publicação da Receita Federal
+   no Anexo III da IN RFB nº 2.021/2021.
+   Ordem das colunas:
+   [casa_pop, comercial, conj_pop, galpao, res_multi, res_uni, garagens]
+   ============================================================ */
+const VAU_PERIODO = "Maio/2026";
+const VAU = {
+  AC: [2086.46, 3865.27, 2086.46, 1786.91, 3490.36, 4129.57, 3865.27],
+  AL: [1326.26, 2400.63, 1326.26, 1121.31, 2146.17, 2490.35, 2400.63],
+  AM: [2086.46, 3865.27, 2086.46, 1786.91, 3490.36, 4129.57, 3865.27],
+  AP: [1851.74, 3296.17, 1851.74, 1566.69, 2903.45, 3287.40, 3296.17],
+  BA: [1448.29, 2572.22, 1448.29, 1167.02, 2245.86, 2679.67, 2572.22],
+  CE: [1650.76, 2769.59, 1650.76, 1312.04, 2433.20, 2801.99, 2769.59],
+  DF: [1546.41, 2803.27, 1546.41, 1253.78, 2449.56, 2826.93, 2803.27],
+  ES: [1865.69, 3140.88, 1865.69, 1423.27, 2818.57, 3312.94, 3140.88],
+  GO: [1477.94, 2633.19, 1477.94, 1230.56, 2312.98, 2770.41, 2633.19],
+  MA: [1277.75, 2233.21, 1277.75, 1065.62, 2186.92, 2286.30, 2233.21],
+  MG: [1680.14, 2912.20, 1680.14, 1281.12, 2593.71, 2989.71, 2912.20],
+  MS: [1258.32, 2283.21, 1258.32, 1029.23, 1836.95, 2193.11, 2283.21],
+  MT: [2163.37, 3852.54, 2163.37, 1694.16, 3390.30, 3901.07, 3852.54],
+  PA: [1611.44, 2793.12, 1611.44, 1320.85, 2480.80, 2839.89, 2793.12],
+  PB: [1105.26, 2034.41, 1105.26,  935.03, 1809.84, 2042.34, 2034.41],
+  PE: [1511.88, 2586.33, 1511.88, 1183.59, 2278.99, 2725.06, 2586.33],
+  PI: [1277.75, 2233.21, 1277.75, 1065.62, 1971.74, 2286.30, 2233.21],
+  PR: [1778.84, 3166.84, 1778.84, 1419.42, 2769.46, 3251.41, 3166.84],
+  RJ: [1685.83, 2955.88, 1685.83, 1342.15, 2598.80, 3018.81, 2955.88],
+  RN: [1490.31, 2465.68, 1490.31, 1185.36, 2215.72, 2580.83, 2465.68],
+  RO: [1692.90, 2964.04, 1692.90, 1321.58, 2620.71, 2880.01, 2964.04],
+  RR: [1862.65, 3500.38, 1862.65, 1677.86, 3072.41, 3584.71, 3500.38],
+  RS: [1805.49, 3543.36, 1805.49, 1374.90, 2987.99, 3375.12, 3543.36],
+  SC: [1942.00, 3320.29, 1942.00, 1535.94, 2889.50, 3405.28, 3320.29],
+  SE: [1359.52, 2516.85, 1359.52, 1157.20, 2247.24, 2480.88, 2516.85],
+  SP: [1476.87, 2614.71, 1476.87, 1231.83, 2296.89, 2633.50, 2614.71],
+  TO: [1477.94, 2633.19, 1477.94, 1230.56, 2312.98, 2770.41, 2633.19],
+};
+// Índices das colunas no array acima:
+const CAT_IDX = {
+  "Casa Popular":              0,
+  "Comercial Salas/Lojas":     1,
+  "Conj. Hab. Popular":        2,
+  "Galpão Ind.":               3,
+  "Residencial Multifamiliar": 4,
+  "Residencial Unifamiliar":   5,
+  "Edifício de Garagens":      6,
+};
+
+/* ============================================================
+   Utilidades
+   ============================================================ */
+const $ = (id) => document.getElementById(id);
+const fmtBRL = (v) => "R$ " + v.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const fmtM2  = (v) => v.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " m²";
+const num    = (id) => parseFloat(($(id).value || "0").toString().replace(",", ".")) || 0;
+
+function toast(msg, isError = false) {
+  const t = $("toast");
+  t.textContent = msg;
+  t.className = "toast show" + (isError ? " error" : "");
+  setTimeout(() => { t.className = "toast" + (isError ? " error" : ""); }, 3500);
+}
+
+/* ============================================================
+   Navegação entre etapas
+   ============================================================ */
+function goStep(n) {
+  document.querySelectorAll(".step").forEach(s => s.classList.remove("active"));
+  document.querySelector('.step[data-step="' + n + '"]').classList.add("active");
+  document.getElementById("calc").scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+document.querySelectorAll("[data-next]").forEach(btn => {
+  btn.addEventListener("click", () => {
+    const next = parseInt(btn.dataset.next, 10);
+
+    if (next === 2) {
+      if (!$("resp").value || !$("dest").value || !$("tipo").value || !$("categoria").value || !$("concreto").value || !$("uf").value) {
+        return toast("Preencha todos os campos.", true);
+      }
+    }
+    if (next === 3) {
+      const s = somaAreas();
+      if (s.total <= 0) return toast("A soma das áreas deve ser maior que zero.", true);
+    }
+    goStep(next);
+  });
+});
+document.querySelectorAll("[data-prev]").forEach(btn => {
+  btn.addEventListener("click", () => goStep(parseInt(btn.dataset.prev, 10)));
+});
+
+/* ============================================================
+   Soma das áreas — Manual SERO §17 / §18
+   Áreas principais entram pelo total declarado.
+   Áreas complementares (piscina): coberta 50%, descoberta 25%.
+   ============================================================ */
+function somaAreas() {
+  const a_constr = num("a_construcao");
+  const a_ref    = num("a_reforma");
+  const a_demo   = num("a_demolicao");
+  const a_pcob   = num("a_pcoberta");
+  const a_pdes   = num("a_pdescoberta");
+
+  // Área total para cálculo (soma das áreas para cálculo: principal + complementares já reduzidas)
+  const area_principal = a_constr + a_ref + a_demo;
+  const area_compl     = a_pcob * 0.50 + a_pdes * 0.25;
+  const area_total_calc = area_principal + area_compl;
+  const area_total_bruta = a_constr + a_ref + a_demo + a_pcob + a_pdes;
+
+  $("soma_total").textContent = area_total_bruta.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  $("soma_equiv").textContent = area_total_calc.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+  return {
+    bruta: area_total_bruta,
+    calc:  area_total_calc,
+    principal: area_principal,
+    complementar: area_compl,
+    a_constr, a_ref, a_demo, a_pcob, a_pdes,
+  };
+}
+
+["a_construcao","a_reforma","a_demolicao","a_pcoberta","a_pdescoberta"]
+  .forEach(id => $(id).addEventListener("input", somaAreas));
+
+/* ============================================================
+   Cálculo do INSS conforme Manual do SERO
+   Fórmula:
+     CO  = VAU(UF, destinação) × área total p/ cálculo
+     RMT_base = CO × CMO(tipo de obra, destinação)
+     RMT  = RMT_base × % categoria × [80% se Edif. Garagens] × [Fator Social se PF]
+     INSS_direto = RMT × alíquota total (PF 30,75% / PJ 33,125%)
+     INSS_reduzido = INSS_direto × (1 - red. pré-fabricado/usinado), se aplicável
+   ============================================================ */
+function calcular() {
+  const resp      = $("resp").value;        // PF / PJ
+  const dest      = $("dest").value;
+  const tipo      = $("tipo").value;        // Alvenaria / Mista / Madeira
+  const categoria = $("categoria").value;   // Obra Nova / Acréscimo / Reforma / Demolição
+  const concreto  = $("concreto").value;    // Sim / Não
+  const uf        = $("uf").value;
+
+  const s = somaAreas();
+
+  // 1) VAU pela destinação/UF
+  const cat_idx = CAT_IDX[dest];
+  const vauRow  = VAU[uf] || VAU.SP;
+  const vau     = (cat_idx != null) ? vauRow[cat_idx] : vauRow[5];
+
+  // 2) Custo da Obra
+  const co = vau * s.calc;
+
+  // 3) CMO conforme destinação e tipo
+  const isPopular = (dest === "Casa Popular" || dest === "Conj. Hab. Popular");
+  const cmoTabela = isPopular ? CMO.popular : CMO.padrao;
+  const cmoPct = cmoTabela[tipo] != null ? cmoTabela[tipo] : 20; // fallback alvenaria padrão
+
+  let rmt = co * (cmoPct / 100);
+
+  // 4) Percentual de cálculo por categoria (Manual §19.2)
+  const pctCat = PCT_CATEGORIA[categoria] != null ? PCT_CATEGORIA[categoria] : 100;
+  rmt = rmt * (pctCat / 100);
+
+  // 5) Edifício de Garagens — redução de 20% (aplica 80%)  Manual §19.3
+  if (dest === "Edifício de Garagens") rmt = rmt * 0.80;
+
+  // 6) Fator Social (somente PF) — Manual §19.4
+  const isPF = (resp === "Pessoa Física");
+  let fsPct = null;
+  if (isPF) {
+    // Área total da categoria de obra = soma de principal + complementar deste projeto
+    fsPct = fatorSocial(s.bruta);
+    rmt = rmt * (fsPct / 100);
+  }
+
+  // 7) Alíquota total (cota patronal + RAT + outras entidades)
+  const aliquota = isPF ? CONFIG.ALIQUOTA_PF : CONFIG.ALIQUOTA_PJ;
+  const inss_direto = rmt * (aliquota / 100);
+
+  // 8) Redução por pré-fabricado/usinado (Manual §19.5 — só vale p/ alvenaria)
+  const usinado = (concreto === "Sim");
+  const aplicaPreFab = usinado && (tipo === "Alvenaria");
+  const reducaoPct = aplicaPreFab ? CONFIG.RED_PRE_FAB : 0;
+  const inss_reduzido = inss_direto * (1 - reducaoPct / 100);
+
+  const economia = Math.max(0, inss_direto - inss_reduzido);
+
+  return {
+    inputs: {
+      resp, dest, tipo, categoria, concreto, uf,
+      a_construcao:  s.a_constr,
+      a_reforma:     s.a_ref,
+      a_demolicao:   s.a_demo,
+      a_pcoberta:    s.a_pcob,
+      a_pdescoberta: s.a_pdes,
+    },
+    numeros: {
+      area_total: s.bruta,
+      area_total_calculo: s.calc,
+      vau, co, rmt,
+      cmo_pct: cmoPct,
+      pct_categoria: pctCat,
+      fator_social_pct: fsPct,
+      aliquota_pct: aliquota,
+      reducao_pre_fab_pct: reducaoPct,
+      inss_direto, inss_reduzido, economia,
+    }
+  };
+}
+
+/* ============================================================
+   Botão "Calcular" — valida dados de contato, executa o cálculo,
+   renderiza o resultado, envia o lead pro Google Sheets e prepara
+   o link do WhatsApp.
+   ============================================================ */
+$("btnCalcular").addEventListener("click", async function () {
+  const nome  = $("nome").value.trim();
+  const ddd   = $("ddd").value.replace(/\D/g, "");
+  const whats = $("whats").value.replace(/\D/g, "");
+  const email = $("email").value.trim();
+
+  if (!nome) return toast("Informe seu nome.", true);
+  if (ddd.length !== 2) return toast("DDD deve ter 2 dígitos.", true);
+  if (!(whats.length === 8 || whats.length === 9)) {
+    return toast("WhatsApp deve ter 8 ou 9 dígitos.", true);
+  }
+
+  const r = calcular();
+
+  // Renderiza resultados
+  $("v_inss_direto").textContent   = fmtBRL(r.numeros.inss_direto);
+  $("v_inss_reduzido").textContent = fmtBRL(r.numeros.inss_reduzido);
+  $("v_economia").textContent      = fmtBRL(r.numeros.economia);
+  $("v_cod").textContent           = fmtBRL(r.numeros.co);
+  $("v_rmt").textContent           = fmtBRL(r.numeros.rmt);
+  $("v_vau").textContent           = fmtBRL(r.numeros.vau) + " /m²";
+  $("v_fs").textContent            = (r.numeros.fator_social_pct != null)
+    ? (r.numeros.fator_social_pct + "%")
+    : "Não se aplica (PJ)";
+
+  // Monta link do WhatsApp com a mensagem personalizada
+  const waMsg =
+    "Olá, me chamo " + nome + "!\n\n" +
+    "Simulei o INSS da minha obra no site.\n" +
+    "Sistema simplificado: " + fmtBRL(r.numeros.inss_direto) + "\n" +
+    "Com benefício do governo: " + fmtBRL(r.numeros.inss_reduzido) + "\n" +
+    "Economia potencial: " + fmtBRL(r.numeros.economia) + "\n\n" +
+    "Gostaria de um orçamento para regularizar a obra.";
+  $("btnWhatsapp").href = "https://wa.me/" + CONFIG.WHATSAPP + "?text=" + encodeURIComponent(waMsg);
+
+  goStep(4);
+
+  // Envia o lead pro Google Sheets via Apps Script (fire-and-forget)
+  const payload = {
+    timestamp: new Date().toISOString(),
+    nome: nome, ddd: ddd, whatsapp: whats, email: email,
+  };
+  Object.assign(payload, r.inputs, r.numeros);
+
+  try {
+    if (CONFIG.APPS_SCRIPT_URL && CONFIG.APPS_SCRIPT_URL.indexOf("COLE_AQUI") !== 0) {
+      await fetch(CONFIG.APPS_SCRIPT_URL, {
+        method: "POST",
+        mode: "no-cors",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify(payload),
+      });
+    } else {
+      console.warn("APPS_SCRIPT_URL não configurada. Lead não foi enviado para a planilha.");
+    }
+  } catch (e) {
+    console.error("Erro ao enviar lead:", e);
+  }
+});
+
+/* ============================================================
+   Botão "Nova simulação" — reseta o formulário e volta à etapa 1
+   ============================================================ */
+$("btnReiniciar").addEventListener("click", function () {
+  document.querySelectorAll(".calc-card input").forEach(function (i) {
+    i.value = (i.type === "number" ? "0" : "");
+  });
+  document.querySelectorAll(".calc-card select").forEach(function (s) {
+    s.value = "";
+  });
+  somaAreas();
+  goStep(1);
+});
+
+/* ============================================================
+   Inicialização: ano do footer + indicador do período do VAU
+   ============================================================ */
+document.getElementById("ano").textContent = new Date().getFullYear();
+var elPeriodo = document.getElementById("vau-periodo");
+if (elPeriodo) elPeriodo.textContent = "VAU vigente: " + VAU_PERIODO;
+
+</script>
 </body>
 </html>
