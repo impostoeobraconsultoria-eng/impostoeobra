@@ -554,4 +554,5 @@ body {
   font-size: 13px; font-weight: 700;
   text-transform: uppercase; letter-spacing: .04em; color: var(--muted);
 }
-.chart-card canvas { max-height: 260px; }
+.chart-card { position: relative; }
+.chart-card canvas { max-height: 260px; height: 260px !important; }
