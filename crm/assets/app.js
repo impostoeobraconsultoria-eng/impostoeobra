@@ -318,6 +318,28 @@ var views = {
               '<input type="text" id="cfg-prop-pasta" value="' + escapeHtml(cfg.doc_proposta_pasta_id || "") + '" placeholder="ID da pasta no Drive" />' +
               '<small class="muted">URL da pasta: <code>drive.google.com/drive/folders/&lt;ID&gt;</code> — copie só o ID.</small></div></div>';
 
+      html += '<h4 style="margin-top:18px;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);">Contratos (Google Doc)</h4>';
+      html += '<div class="config-row"><div class="field"><label>ID template — Obra em Andamento</label>' +
+              '<input type="text" id="cfg-ct-and" value="' + escapeHtml(cfg.doc_contrato_andamento_id || "") + '" placeholder="ID do Google Doc do template"/></div></div>';
+      html += '<div class="config-row"><div class="field"><label>ID template — Obra Finalizada</label>' +
+              '<input type="text" id="cfg-ct-fin" value="' + escapeHtml(cfg.doc_contrato_finalizada_id || "") + '"/></div></div>';
+      html += '<div class="config-row"><div class="field"><label>ID template — Prestação de Serviços</label>' +
+              '<input type="text" id="cfg-ct-srv" value="' + escapeHtml(cfg.doc_contrato_servico_id || "") + '"/></div></div>';
+      html += '<div class="config-row"><div class="field"><label>ID da pasta onde salvar os contratos gerados</label>' +
+              '<input type="text" id="cfg-ct-pasta" value="' + escapeHtml(cfg.doc_contrato_pasta_id || "") + '"/></div></div>';
+
+      html += '<h4 style="margin-top:18px;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);">Dados da CONTRATADA (Imposto & Obra)</h4>';
+      html += '<div class="config-row"><div class="field"><label>Razão social</label>' +
+              '<input type="text" id="cfg-co-razao" value="' + escapeHtml(cfg.contratada_razao || "") + '" placeholder="IMPOSTO & OBRA CONSULTORIA LTDA"/></div></div>';
+      html += '<div class="config-row"><div class="field"><label>CNPJ</label>' +
+              '<input type="text" id="cfg-co-cnpj" value="' + escapeHtml(cfg.contratada_cnpj || "") + '"/></div></div>';
+      html += '<div class="config-row"><div class="field"><label>Endereço da sede</label>' +
+              '<input type="text" id="cfg-co-end" value="' + escapeHtml(cfg.contratada_endereco || "") + '"/></div></div>';
+      html += '<div class="config-row"><div class="field"><label>Representante (sócio que assina)</label>' +
+              '<input type="text" id="cfg-co-rep" value="' + escapeHtml(cfg.contratada_representante || "") + '"/></div></div>';
+      html += '<div class="config-row"><div class="field"><label>Cidade sede (foro)</label>' +
+              '<input type="text" id="cfg-co-cidade" value="' + escapeHtml(cfg.cidade_sede || "") + '" placeholder="Brasília/DF"/></div></div>';
+
       html += '<div><button class="btn" id="btn-save-server-cfg">Salvar parâmetros</button></div>';
       html += '</div>';
 
@@ -372,6 +394,15 @@ var views = {
           await api.call("config.set", { chave: "endereco_empresa",   valor: $("cfg-end-emp").value.trim() });
           await api.call("config.set", { chave: "doc_proposta_template_id", valor: $("cfg-prop-tpl").value.trim() });
           await api.call("config.set", { chave: "doc_proposta_pasta_id",    valor: $("cfg-prop-pasta").value.trim() });
+          await api.call("config.set", { chave: "doc_contrato_andamento_id", valor: $("cfg-ct-and").value.trim() });
+          await api.call("config.set", { chave: "doc_contrato_finalizada_id", valor: $("cfg-ct-fin").value.trim() });
+          await api.call("config.set", { chave: "doc_contrato_servico_id",   valor: $("cfg-ct-srv").value.trim() });
+          await api.call("config.set", { chave: "doc_contrato_pasta_id",     valor: $("cfg-ct-pasta").value.trim() });
+          await api.call("config.set", { chave: "contratada_razao",         valor: $("cfg-co-razao").value.trim() });
+          await api.call("config.set", { chave: "contratada_cnpj",          valor: $("cfg-co-cnpj").value.trim() });
+          await api.call("config.set", { chave: "contratada_endereco",      valor: $("cfg-co-end").value.trim() });
+          await api.call("config.set", { chave: "contratada_representante", valor: $("cfg-co-rep").value.trim() });
+          await api.call("config.set", { chave: "cidade_sede",              valor: $("cfg-co-cidade").value.trim() });
           state.serverConfig = await api.call("config.get");
           // refresh dos stores que usam config (etapas/produtos) e da view atual
           if (typeof leadsStore !== "undefined" && leadsStore.refresh) leadsStore.refresh(true);
@@ -1163,6 +1194,102 @@ var modalProposta = {
   }
 };
 
+// ============================================================
+// MODAL CONTRATO — DOC (gera Google Doc do contrato existente)
+// ============================================================
+var modalContratoDoc = {
+  open: function (contrato, cliente) {
+    if (!contrato || !cliente) return;
+    var produto = String(contrato.produto || "").toLowerCase();
+    var modalidade = produto.indexOf("andamento") >= 0 ? "Obra em Andamento" :
+                     produto.indexOf("finaliz") >= 0 || produto.indexOf("concluid") >= 0 ? "Obra Finalizada" :
+                     "Prestação de Serviços";
+
+    var valorTotal = parseFloat(contrato.valor_total) || 0;
+    var parc = parseInt(contrato.parcelas, 10) || 1;
+    var enderecoObra = [cliente.obra_end_logradouro, cliente.obra_end_bairro,
+                        cliente.obra_end_cidade, cliente.obra_end_uf].filter(Boolean).join(", ") || "—";
+    var docCli = cliente.cpf || cliente.cnpj || "—";
+
+    var html = '<div class="modal-backdrop" id="modal-bg"><div class="modal-content" style="max-width:680px;">';
+    html += '<h3>📝 Gerar Documento do Contrato</h3>';
+    html += '<p class="muted" style="font-size:13px;margin:-4px 0 10px;">Modalidade detectada: <strong>' + escapeHtml(modalidade) + '</strong>. Revise antes de gerar.</p>';
+
+    html += '<div class="field-row">' +
+            '<div><label>Número do contrato</label><input type="text" id="cd-numero" value="' + escapeHtml(contrato.numero || contrato.id) + '" readonly style="background:#f1f5f9;"/></div>' +
+            '<div><label>Data de assinatura</label><input type="text" id="cd-data" value="' + escapeHtml(String(contrato.data_assinatura || "").substring(0,10) || (new Date()).toLocaleDateString("pt-BR")) + '" placeholder="DD/MM/AAAA"/></div></div>';
+
+    html += '<div class="field-row">' +
+            '<div><label>Contratante (nome)</label><input type="text" id="cd-cnome" value="' + escapeHtml(cliente.nome || "") + '"/></div>' +
+            '<div><label>CPF / CNPJ</label><input type="text" id="cd-cdoc" value="' + escapeHtml(docCli) + '"/></div></div>';
+
+    html += '<div class="field-row single"><div><label>Endereço residencial do contratante</label><input type="text" id="cd-cend" value="' + escapeHtml([cliente.end_logradouro, cliente.end_bairro, cliente.end_cidade, cliente.end_uf, cliente.end_cep].filter(Boolean).join(", ")) + '"/></div></div>';
+
+    html += '<div class="field-row single"><div><label>Endereço da obra</label><input type="text" id="cd-oend" value="' + escapeHtml(enderecoObra) + '"/></div></div>';
+
+    html += '<div class="field-row">' +
+            '<div><label>Área da obra (m²)</label><input type="text" id="cd-oarea" value="' + escapeHtml(cliente.obra_area || "") + '"/></div>' +
+            '<div><label>Matrícula</label><input type="text" id="cd-omat" value="' + escapeHtml(cliente.obra_matricula || "") + '"/></div></div>';
+
+    html += '<hr style="margin:12px 0;border:none;border-top:1px solid var(--border)">';
+
+    html += '<div class="field-row">' +
+            '<div><label>Valor total (R$)</label><input type="number" step="0.01" id="cd-vtot" value="' + valorTotal.toFixed(2) + '"/></div>' +
+            '<div><label>Valor por extenso</label><input type="text" id="cd-vext" placeholder="ex.: três mil e cem reais"/></div></div>';
+
+    html += '<div class="field-row">' +
+            '<div><label>Parcelas</label><input type="number" step="1" min="1" id="cd-parc" value="' + parc + '"/></div>' +
+            '<div><label>Forma de pagamento</label><input type="text" id="cd-forma" value="' + escapeHtml(contrato.forma_pagamento || "PIX / Boleto / Cartão") + '"/></div></div>';
+
+    if (modalidade === "Obra em Andamento") {
+      html += '<div class="field-row"><div><label>Dia de vencimento mensal</label><input type="number" min="1" max="28" id="cd-dia" value="10"/></div><div></div></div>';
+    }
+    if (modalidade === "Prestação de Serviços") {
+      html += '<div class="field-row single"><div><label>Escopo customizado do serviço</label><textarea id="cd-escopo" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font:inherit;font-size:13px;min-height:60px;">' + escapeHtml(contrato.observacoes || "") + '</textarea></div></div>';
+    }
+
+    html += '<div class="modal-actions">' +
+            '<button class="btn ghost" id="cd-cancel">Cancelar</button>' +
+            '<button class="btn" id="cd-go">Gerar no Drive</button></div>';
+    html += '</div></div>';
+    document.body.insertAdjacentHTML("beforeend", html);
+
+    $("cd-cancel").onclick = function () { document.getElementById("modal-bg").remove(); };
+    $("cd-go").onclick = async function () {
+      $("cd-go").disabled = true;
+      try {
+        var params = {
+          contratante_nome:    $("cd-cnome").value.trim(),
+          contratante_cpf_cnpj:$("cd-cdoc").value.trim(),
+          contratante_endereco:$("cd-cend").value.trim(),
+          obra_endereco:       $("cd-oend").value.trim(),
+          obra_area:           $("cd-oarea").value.trim(),
+          obra_matricula:      $("cd-omat").value.trim(),
+          data_assinatura:     $("cd-data").value.trim(),
+          valor_total:         "R$ " + (parseFloat($("cd-vtot").value)||0).toLocaleString("pt-BR", {minimumFractionDigits:2, maximumFractionDigits:2}),
+          valor_extenso:       $("cd-vext").value.trim() || "(valor por extenso)",
+          parcelas:            $("cd-parc").value.trim(),
+          forma_pagamento:     $("cd-forma").value.trim()
+        };
+        if ($("cd-dia"))   params.dia_vencimento = $("cd-dia").value.trim();
+        if ($("cd-escopo")) params.escopo_servico = $("cd-escopo").value.trim();
+
+        var r = await api.call("contratos.gerarDoc", { contrato_id: contrato.id, params: params });
+        document.getElementById("modal-bg").remove();
+        toast("Contrato gerado no Drive.", "success");
+        window.open(r.url, "_blank", "noopener");
+        // refresh do cliente pra timeline puxar a atividade
+        if (typeof clienteDetailView !== "undefined" && clienteDetailView.current && clienteDetailView.current.id === cliente.id) {
+          clienteDetailView.render(cliente.id);
+        }
+      } catch (e) {
+        toast("Erro: " + (e.message || e), "error");
+        $("cd-go").disabled = false;
+      }
+    };
+  }
+};
+
 // helper compartilhado: formata "55619..." -> "+55 (61) 9 ..."
 function formatWhatsappE164(raw) {
   var s = String(raw || "").replace(/\D/g, "");
@@ -1399,7 +1526,10 @@ var clienteDetailView = {
           '<td>R$ ' + vp.toLocaleString("pt-BR", {minimumFractionDigits:2}) + '</td>' +
           '<td>' + escapeHtml(ct.parcelas || 1) + 'x</td>' +
           '<td>' + escapeHtml(String(ct.data_assinatura || "").substring(0,10)) + '</td>' +
-          '<td><button class="btn btn-sm ghost" data-edit-contrato="' + escapeHtml(ct.id) + '">Editar</button></td>' +
+          '<td>' +
+            '<button class="btn btn-sm" data-doc-contrato="' + escapeHtml(ct.id) + '" style="margin-right:4px;">📝 Gerar doc</button>' +
+            '<button class="btn btn-sm ghost" data-edit-contrato="' + escapeHtml(ct.id) + '">Editar</button>' +
+          '</td>' +
         '</tr>';
       });
       html += '</tbody></table>';
@@ -1492,6 +1622,13 @@ var clienteDetailView = {
         var id = btn.dataset.editContrato;
         var ct = clienteDetailView.contratos.find(function (x) { return x.id === id; });
         if (ct) modalContrato.open(ct, c.id);
+      };
+    });
+    document.querySelectorAll("[data-doc-contrato]").forEach(function (btn) {
+      btn.onclick = function () {
+        var id = btn.dataset.docContrato;
+        var ct = clienteDetailView.contratos.find(function (x) { return x.id === id; });
+        if (ct) modalContratoDoc.open(ct, c);
       };
     });
   }
@@ -1693,30 +1830,30 @@ var modalContrato = {
             '<textarea id="mc-obs" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font:inherit;font-size:13px;min-height:60px;">' + escapeHtml(c.observacoes) + '</textarea></div></div>';
 
     html += '<div class="modal-actions">';
-    if (isEdit) html += '<button class="btn danger btn-sm" id="mc-delete" style="margin-right:auto">🗑 Excluir</button>';
-    html += '<button class="btn ghost" id="mc-cancel">Cancelar</button>' +
-            '<button class="btn" id="mc-save">' + (isEdit ? 'Salvar' : 'Criar Contrato') + '</button></div>';
+    if (isEdit) html += '<button class="btn ghost" id="mc-delete" style="margin-right:auto;color:#b91c1c;">Excluir</button>';
+    html += '<button class="btn ghost" id="mc-cancel">Cancelar</button>';
+    html += '<button class="btn" id="mc-save">' + (isEdit ? '💾 Salvar' : 'Criar Contrato') + '</button>';
+    html += '</div>';
     html += '</div></div>';
     document.body.insertAdjacentHTML("beforeend", html);
 
     $("mc-cancel").onclick = function () { document.getElementById("modal-bg").remove(); };
-
     $("mc-save").onclick = async function () {
       $("mc-save").disabled = true;
       try {
         var payload = {
-          cliente_id: clienteId,
-          numero: $("mc-numero").value.trim(),
-          produto: $("mc-produto").value,
-          status: $("mc-status").value,
-          valor_total: parseFloat($("mc-vt").value) || 0,
-          valor_pago: parseFloat($("mc-vp").value) || 0,
-          parcelas: parseInt($("mc-parc").value, 10) || 1,
-          forma_pagamento: $("mc-forma").value.trim(),
-          data_assinatura: $("mc-da").value.trim(),
-          data_inicio: $("mc-di").value.trim(),
-          data_conclusao: $("mc-dc").value.trim(),
-          observacoes: $("mc-obs").value
+          cliente_id:       clienteId,
+          numero:           $("mc-numero").value.trim(),
+          produto:          $("mc-produto").value,
+          status:           $("mc-status").value,
+          valor_total:      parseFloat($("mc-vt").value) || 0,
+          valor_pago:       parseFloat($("mc-vp").value) || 0,
+          parcelas:         parseInt($("mc-parc").value, 10) || 1,
+          forma_pagamento:  $("mc-forma").value,
+          data_assinatura:  $("mc-da").value.trim(),
+          data_inicio:      $("mc-di").value.trim(),
+          data_conclusao:   $("mc-dc").value.trim(),
+          observacoes:      $("mc-obs").value
         };
         if (isEdit) {
           payload.id = c.id;
@@ -1727,7 +1864,9 @@ var modalContrato = {
           toast("Contrato criado.", "success");
         }
         document.getElementById("modal-bg").remove();
-        clienteDetailView.render(clienteId);
+        if (typeof clienteDetailView !== "undefined" && clienteDetailView.current) {
+          clienteDetailView.render(clienteDetailView.current.id);
+        }
       } catch (e) {
         toast("Erro: " + (e.message || e), "error");
         $("mc-save").disabled = false;
@@ -1736,12 +1875,12 @@ var modalContrato = {
 
     if (isEdit) {
       $("mc-delete").onclick = async function () {
-        if (!confirm("Excluir o contrato " + c.numero + " ?")) return;
+        if (!confirm("Excluir contrato " + (c.numero || c.id) + "?")) return;
         try {
           await api.call("contratos.delete", { id: c.id });
           toast("Contrato excluído.", "success");
           document.getElementById("modal-bg").remove();
-          clienteDetailView.render(clienteId);
+          if (clienteDetailView && clienteDetailView.current) clienteDetailView.render(clienteDetailView.current.id);
         } catch (e) { toast("Erro: " + (e.message || e), "error"); }
       };
     }
