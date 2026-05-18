@@ -1,15 +1,6 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-   <!-- Google tag (gtag.js) -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-8CYR5J0Z3L"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-
-  gtag('config', 'G-8CYR5J0Z3L');
-</script>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Imposto &amp; Obra Consultoria — Regularize sua obra e economize INSS</title>
@@ -380,7 +371,7 @@ label.field {
   box-shadow: var(--shadow);
 }
 .why-img::after {
-  content: "";
+  content: "🏗️";
   position: absolute;
   inset: 0;
   display: grid; place-items: center;
@@ -511,7 +502,7 @@ label.field {
         A Imposto &amp; Obra Consultoria oferece <strong>assessoria jurídico-tributária especializada para construção civil</strong> com foco em INSS de obra. Te ajudamos a regularizar a sua obra e a reduzir o imposto do INSS.
       </p>
       <div class="cta-row">
-        <a class="btn" href="https://api.whatsapp.com/send?phone=556193982653&text=Ol%C3%A1%21%20Preciso%20regularizar%20minha%20obra.">Fale conosco agora</a>
+        <a class="btn" href="#calc">Fale conosco agora</a>
       </div>
       <div class="badge-row">
         <div class="badge">Sua obra regularizada em 5 dias úteis</div>
@@ -844,7 +835,7 @@ label.field {
       <h3>Regularize sua obra com segurança e economia</h3>
       <p class="sub">Evite multas, bloqueios e cobranças indevidas.</p>
       <p class="sub-2">Tenha uma equipe especializada cuidando do seu caso.</p>
-      <a class="btn" href="https://api.whatsapp.com/send?phone=556193982653&text=Ol%C3%A1%21%20Preciso%20regularizar%20minha%20obra">Fale conosco!</a>
+      <a class="btn" href="#calc">Fale conosco!</a>
     </div>
   </div>
 </section>
@@ -853,7 +844,7 @@ label.field {
 <footer class="site-footer">
   <div class="container footer-row">
     <div>© <span id="ano"></span> – Imposto&amp;Obra Consultoria. Todos os direitos reservados.</div>
-    <div><a href="/politica/aviso-de-privacidade.html">Aviso de Privacidade</a></div>
+    <div><a href="#">Aviso de Privacidade</a></div>
   </div>
 </footer>
 
@@ -870,7 +861,7 @@ label.field {
    ============================================================ */
 const CONFIG = {
   // 1) URL do Google Apps Script (substituir após publicar o script).
-  APPS_SCRIPT_URL: "https://script.google.com/macros/s/AKfycbw2t8qobz6qwOo7G0VJy4-1cXuCLoVYp3y3U3BsIaXRcYoDJ8SmfUTztt4RVEwtVPe2iQ/exec",
+  APPS_SCRIPT_URL: "https://script.google.com/macros/s/AKfycbzSlJ7yINiQwA8Og8TvZ2FV2WSXYbh8VLQxT96cT_Zkds-5JNfLcXM1ngBRRVm1WF8eVg/exec",
 
   // 2) WhatsApp da consultoria (formato E.164, sem + nem espaços)
   WHATSAPP: "5561982134992",
@@ -1214,6 +1205,50 @@ $("btnReiniciar").addEventListener("click", function () {
 document.getElementById("ano").textContent = new Date().getFullYear();
 var elPeriodo = document.getElementById("vau-periodo");
 if (elPeriodo) elPeriodo.textContent = "VAU vigente: " + VAU_PERIODO;
+
+/* ============================================================
+   Sync VAU do CRM (busca tabela oficial atualizada do Apps Script)
+   Cache local de 30 min em localStorage; fallback ao hardcoded.
+   ============================================================ */
+(function () {
+  var CRM_API_URL = "__CRM_APPS_SCRIPT_URL__"; // substitua pela URL do Apps Script do CRM
+  if (!CRM_API_URL || CRM_API_URL.indexOf("__CRM_") === 0) return; // não configurado
+
+  var CACHE_KEY = "ieo-vau-cache-v1";
+  var CACHE_TTL = 30 * 60 * 1000; // 30 minutos
+
+  // tenta usar cache válido
+  try {
+    var raw = localStorage.getItem(CACHE_KEY);
+    if (raw) {
+      var c = JSON.parse(raw);
+      if (c && c.ts && (Date.now() - c.ts) < CACHE_TTL && c.data) {
+        applyVAU(c.data);
+        return;
+      }
+    }
+  } catch (_) {}
+
+  fetch(CRM_API_URL + "?action=vau.public")
+    .then(function (r) { return r.json(); })
+    .then(function (resp) {
+      if (resp && resp.ok && resp.data) {
+        try { localStorage.setItem(CACHE_KEY, JSON.stringify({ ts: Date.now(), data: resp.data })); } catch (_) {}
+        applyVAU(resp.data);
+      }
+    })
+    .catch(function (e) { console.warn("vau sync falhou, usando hardcoded:", e); });
+
+  function applyVAU(d) {
+    if (d.VAU && Object.keys(d.VAU).length) {
+      // sobrescreve o objeto VAU global
+      Object.keys(d.VAU).forEach(function (uf) { VAU[uf] = d.VAU[uf]; });
+    }
+    if (d.vigencia && elPeriodo) {
+      elPeriodo.textContent = "VAU vigente: " + d.vigencia;
+    }
+  }
+})();
 
 </script>
 </body>
