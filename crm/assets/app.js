@@ -310,6 +310,14 @@ var views = {
       html += '<div class="config-row"><div class="field"><label>Endereço da empresa (rodapé do Material de Apoio)</label>' +
               '<input type="text" id="cfg-end-emp" value="' + escapeHtml(cfg.endereco_empresa || "") + '" placeholder="Rua Pais Leme 215, Conj. 1713, Pinheiros-SP." /></div></div>';
 
+      html += '<h4 style="margin-top:18px;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);">Proposta Comercial (Google Doc)</h4>';
+      html += '<div class="config-row"><div class="field"><label>ID do template (Google Doc da proposta)</label>' +
+              '<input type="text" id="cfg-prop-tpl" value="' + escapeHtml(cfg.doc_proposta_template_id || "") + '" placeholder="ID do documento, ex.: 1AbC..." />' +
+              '<small class="muted">URL do template: <code>docs.google.com/document/d/&lt;ID&gt;/edit</code> — copie só o ID.</small></div></div>';
+      html += '<div class="config-row"><div class="field"><label>ID da pasta onde salvar as propostas geradas</label>' +
+              '<input type="text" id="cfg-prop-pasta" value="' + escapeHtml(cfg.doc_proposta_pasta_id || "") + '" placeholder="ID da pasta no Drive" />' +
+              '<small class="muted">URL da pasta: <code>drive.google.com/drive/folders/&lt;ID&gt;</code> — copie só o ID.</small></div></div>';
+
       html += '<div><button class="btn" id="btn-save-server-cfg">Salvar parâmetros</button></div>';
       html += '</div>';
 
@@ -362,6 +370,8 @@ var views = {
           await api.call("config.set", { chave: "produtos",           valor: $("cfg-produtos").value.trim() });
           await api.call("config.set", { chave: "email_empresa",      valor: $("cfg-email-emp").value.trim() });
           await api.call("config.set", { chave: "endereco_empresa",   valor: $("cfg-end-emp").value.trim() });
+          await api.call("config.set", { chave: "doc_proposta_template_id", valor: $("cfg-prop-tpl").value.trim() });
+          await api.call("config.set", { chave: "doc_proposta_pasta_id",    valor: $("cfg-prop-pasta").value.trim() });
           state.serverConfig = await api.call("config.get");
           // refresh dos stores que usam config (etapas/produtos) e da view atual
           if (typeof leadsStore !== "undefined" && leadsStore.refresh) leadsStore.refresh(true);
@@ -740,6 +750,7 @@ var leadDetailView = {
     html += '</div><div class="lead-detail-actions">';
     if (waUrl) html += '<a class="btn success" href="' + waUrl + '" target="_blank" rel="noopener">📱 WhatsApp</a>';
     html += '<button class="btn" id="lead-material">📄 Material de Apoio</button>';
+    html += '<button class="btn" id="lead-proposta">📑 Proposta Comercial</button>';
     if (!l.cliente_id) html += '<button class="btn" id="lead-convert">Converter em Cliente</button>';
     else html += '<span class="muted" style="padding:8px;">→ Cliente #' + escapeHtml(l.cliente_id) + '</span>';
     html += '<button class="btn ghost" id="lead-save">💾 Salvar</button>';
@@ -899,6 +910,9 @@ var leadDetailView = {
 
     var matBtn = $("lead-material");
     if (matBtn) matBtn.onclick = function () { modalMaterial.open(l); };
+
+    var propBtn = $("lead-proposta");
+    if (propBtn) propBtn.onclick = function () { modalProposta.open({ tipo: "lead", obj: l }); };
 
     $("btn-add-nota").onclick = async function () {
       var nota = $("nova-nota").value.trim();
@@ -1070,6 +1084,85 @@ var modalMaterial = {
   }
 };
 
+// ============================================================
+// MODAL PROPOSTA COMERCIAL (Google Doc gerado via Apps Script)
+// ============================================================
+var modalProposta = {
+  open: function (ctx) {
+    // ctx = { tipo: "lead"|"cliente", obj: { ...campos } }
+    if (!ctx || !ctx.obj) return;
+    var o = ctx.obj;
+
+    var nomeDef    = o.nome || "";
+    var cpfDef     = o.cpf_cnpj || o.cpf || o.cnpj || "";
+    var endDef     = o.endereco_obra || o.endereco || ((o.cidade || "") + (o.uf ? "/" + o.uf : ""));
+    var tipoDef    = o.dest || o.tipo || "";
+    var areaDef    = o.area_total || o.a_construcao || "";
+    var situDef    = o.produto === "obra_andamento" ? "Em andamento"
+                    : o.produto === "obra_finalizada" ? "Concluída" : "";
+
+    var html = '<div class="modal-backdrop" id="modal-bg"><div class="modal-content" style="max-width:620px;">';
+    html += '<h3>📑 Gerar Proposta Comercial</h3>';
+    html += '<p class="muted" style="font-size:13px;margin:-4px 0 10px;">Revise os dados — vão direto para a Proposta. O documento é criado no Drive da empresa em <code>doc_proposta_pasta_id</code>.</p>';
+
+    html += '<div class="field-row"><div><label>Nome do cliente *</label><input type="text" id="p-nome" value="' + escapeHtml(nomeDef) + '"/></div>' +
+            '<div><label>CPF / CNPJ</label><input type="text" id="p-cpf" value="' + escapeHtml(cpfDef) + '"/></div></div>';
+    html += '<div class="field-row single"><div><label>Endereço da obra</label><input type="text" id="p-end" value="' + escapeHtml(endDef) + '"/></div></div>';
+    html += '<div class="field-row"><div><label>Tipo de construção</label><input type="text" id="p-tipo" value="' + escapeHtml(tipoDef) + '" placeholder="Residencial / Comercial / ..."/></div>' +
+            '<div><label>Área construída (m²)</label><input type="text" id="p-area" value="' + escapeHtml(areaDef) + '"/></div></div>';
+    html += '<div class="field-row"><div><label>Situação da obra</label><select id="p-situ">' +
+            ['Em andamento','Concluída','Regularização antiga'].map(function (x) { return '<option' + (situDef === x ? ' selected' : '') + '>' + x + '</option>'; }).join("") +
+            '</select></div>' +
+            '<div><label>Data da proposta</label><input type="text" id="p-data" value="' + (new Date()).toLocaleDateString("pt-BR") + '"/></div></div>';
+    html += '<hr style="margin:12px 0;border:none;border-top:1px solid var(--border)">';
+    html += '<div class="field-row"><div><label>Valor — Obra Concluída</label><input type="text" id="p-vconc" value="Sob consulta"/></div>' +
+            '<div><label>Valor — Obra em Andamento</label><input type="text" id="p-vand" value="R$ 260,00/mês"/></div></div>';
+
+    html += '<div class="modal-actions">' +
+            '<button class="btn ghost" id="p-cancel">Cancelar</button>' +
+            '<button class="btn" id="p-go">Gerar no Drive</button></div>';
+    html += '</div></div>';
+    document.body.insertAdjacentHTML("beforeend", html);
+
+    $("p-cancel").onclick = function () { document.getElementById("modal-bg").remove(); };
+    $("p-go").onclick = async function () {
+      var nome = $("p-nome").value.trim();
+      if (!nome) { toast("Nome do cliente é obrigatório.", "error"); return; }
+      $("p-go").disabled = true;
+      try {
+        var payload = {
+          params: {
+            nome_cliente:        nome,
+            cpf_cnpj:            $("p-cpf").value.trim(),
+            endereco_obra:       $("p-end").value.trim(),
+            tipo_construcao:     $("p-tipo").value.trim(),
+            area_construida:     $("p-area").value.trim(),
+            situacao_obra:       $("p-situ").value,
+            data_proposta:       $("p-data").value.trim(),
+            valor_obra_concluida: $("p-vconc").value.trim(),
+            valor_obra_andamento: $("p-vand").value.trim()
+          }
+        };
+        if (ctx.tipo === "lead") payload.lead_id = o.id;
+        else payload.cliente_id = o.id;
+
+        var r = await api.call("propostas.gerar", payload);
+        document.getElementById("modal-bg").remove();
+        toast("Proposta gerada no Drive.", "success");
+        window.open(r.url, "_blank", "noopener");
+
+        // refresh da view atual pra timeline puxar a nova atividade
+        if (ctx.tipo === "lead" && leadDetailView && leadDetailView.current && leadDetailView.current.id === o.id) {
+          leadDetailView.render(o.id);
+        }
+      } catch (e) {
+        toast("Erro: " + (e.message || e), "error");
+        $("p-go").disabled = false;
+      }
+    };
+  }
+};
+
 // helper compartilhado: formata "55619..." -> "+55 (61) 9 ..."
 function formatWhatsappE164(raw) {
   var s = String(raw || "").replace(/\D/g, "");
@@ -1214,6 +1307,7 @@ var clienteDetailView = {
             (c.email ? ' · ✉️ ' + escapeHtml(c.email) : '') + '</div>';
     if (c.lead_id_origem) html += '<div style="margin-top:6px;font-size:12px"><a href="#lead/' + escapeHtml(c.lead_id_origem) + '" style="color:var(--primary)">↩ Ver lead de origem</a></div>';
     html += '</div><div class="lead-detail-actions">';
+    html += '<button class="btn" id="cli-proposta">📑 Proposta Comercial</button>';
     html += '<button class="btn" id="cli-save">💾 Salvar tudo</button>';
     html += '</div></div>';
 
@@ -1333,6 +1427,9 @@ var clienteDetailView = {
 
     html += '</div>';
     $("view").innerHTML = html;
+
+    var clipBtn = $("cli-proposta");
+    if (clipBtn) clipBtn.onclick = function () { modalProposta.open({ tipo: "cliente", obj: c }); };
 
     var save = $("cli-save");
     save.onclick = async function () {
@@ -1739,104 +1836,70 @@ var dashboardView = {
       $("dash-content").innerHTML = cardsHtml + chartsHtml;
       $("dash-status").textContent = "Atualizado " + new Date().toLocaleTimeString("pt-BR").substring(0, 5);
 
-      // destrói gráficos antigos antes de redesenhar
       Object.keys(dashboardView.charts).forEach(function (k) {
         try { dashboardView.charts[k].destroy(); } catch (_) {}
       });
       dashboardView.charts = {};
 
-      if (typeof Chart === "undefined") {
-        console.warn("Chart.js não carregado");
-        return;
-      }
+      if (typeof Chart === "undefined") { console.warn("Chart.js não carregado"); return; }
 
       var COMMON = { responsive: true, maintainAspectRatio: false };
 
-      // Funil (barras horizontais)
       var fnl = d.funil || [];
       dashboardView.charts.funil = new Chart($("ch-funil"), {
         type: "bar",
-        data: {
-          labels: fnl.map(function (x) { return x.status; }),
-          datasets: [{ label: "Leads", data: fnl.map(function (x) { return x.count; }), backgroundColor: "#0071E3" }]
-        },
-        options: Object.assign({}, COMMON, {
-          indexAxis: "y",
-          plugins: { legend: { display: false } },
-          scales: { x: { beginAtZero: true, ticks: { precision: 0 } } }
-        })
+        data: { labels: fnl.map(function (x) { return x.status; }),
+                datasets: [{ label: "Leads", data: fnl.map(function (x) { return x.count; }), backgroundColor: "#0071E3" }] },
+        options: Object.assign({}, COMMON, { indexAxis: "y", plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true, ticks: { precision: 0 } } } })
       });
 
-      // Leads por mês (linha)
       var pm = d.por_mes || {};
       var meses = Object.keys(pm).sort();
       dashboardView.charts.mes = new Chart($("ch-mes"), {
         type: "line",
-        data: {
-          labels: meses,
-          datasets: [{ label: "Leads", data: meses.map(function (m) { return pm[m].leads; }),
-                       borderColor: "#0071E3", backgroundColor: "rgba(0,113,227,.12)", tension: 0.3, fill: true }]
-        },
-        options: Object.assign({}, COMMON, {
-          plugins: { legend: { display: false } },
-          scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
-        })
+        data: { labels: meses,
+                datasets: [{ label: "Leads", data: meses.map(function (m) { return pm[m].leads; }),
+                             borderColor: "#0071E3", backgroundColor: "rgba(0,113,227,.12)", tension: 0.3, fill: true }] },
+        options: Object.assign({}, COMMON, { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } })
       });
 
-      // Por UF (top 12 — barras)
       var uf = d.por_uf || {};
       var ufKeys = Object.keys(uf).sort(function (a, b) { return uf[b] - uf[a]; }).slice(0, 12);
       dashboardView.charts.uf = new Chart($("ch-uf"), {
         type: "bar",
-        data: {
-          labels: ufKeys,
-          datasets: [{ label: "Leads", data: ufKeys.map(function (k) { return uf[k]; }), backgroundColor: "#006AE0" }]
-        },
-        options: Object.assign({}, COMMON, {
-          plugins: { legend: { display: false } },
-          scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
-        })
+        data: { labels: ufKeys,
+                datasets: [{ label: "Leads", data: ufKeys.map(function (k) { return uf[k]; }), backgroundColor: "#006AE0" }] },
+        options: Object.assign({}, COMMON, { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } })
       });
 
-      // Por produto (donut)
       var pp = d.por_produto || {};
       var ppK = Object.keys(pp);
       dashboardView.charts.prod = new Chart($("ch-prod"), {
         type: "doughnut",
-        data: {
-          labels: ppK,
-          datasets: [{ data: ppK.map(function (k) { return pp[k]; }),
-                       backgroundColor: ["#0071E3", "#FFD439", "#16a34a", "#ef4444", "#a855f7", "#06b6d4"] }]
-        },
+        data: { labels: ppK,
+                datasets: [{ data: ppK.map(function (k) { return pp[k]; }),
+                             backgroundColor: ["#0071E3", "#FFD439", "#16a34a", "#ef4444", "#a855f7", "#06b6d4"] }] },
         options: Object.assign({}, COMMON, { plugins: { legend: { position: "bottom" } } })
       });
 
-      // Origem (donut)
       var po = d.por_origem || {};
       var poK = Object.keys(po);
       dashboardView.charts.orig = new Chart($("ch-orig"), {
         type: "doughnut",
-        data: {
-          labels: poK,
-          datasets: [{ data: poK.map(function (k) { return po[k]; }),
-                       backgroundColor: ["#0071E3", "#FFD439", "#64748b", "#16a34a", "#ef4444"] }]
-        },
+        data: { labels: poK,
+                datasets: [{ data: poK.map(function (k) { return po[k]; }),
+                             backgroundColor: ["#0071E3", "#FFD439", "#64748b", "#16a34a", "#ef4444"] }] },
         options: Object.assign({}, COMMON, { plugins: { legend: { position: "bottom" } } })
       });
 
-      // Conversão por mês (barras pareadas)
       dashboardView.charts.conv = new Chart($("ch-conv"), {
         type: "bar",
-        data: {
-          labels: meses,
-          datasets: [
-            { label: "Leads", data: meses.map(function (m) { return pm[m].leads; }),  backgroundColor: "#0071E3" },
-            { label: "Ganhos", data: meses.map(function (m) { return pm[m].ganhos; }), backgroundColor: "#16a34a" }
-          ]
-        },
-        options: Object.assign({}, COMMON, {
-          scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
-        })
+        data: { labels: meses,
+                datasets: [
+                  { label: "Leads",  data: meses.map(function (m) { return pm[m].leads;  }), backgroundColor: "#0071E3" },
+                  { label: "Ganhos", data: meses.map(function (m) { return pm[m].ganhos; }), backgroundColor: "#16a34a" }
+                ] },
+        options: Object.assign({}, COMMON, { scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } })
       });
 
     } catch (e) {
