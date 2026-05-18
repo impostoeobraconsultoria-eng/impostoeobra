@@ -250,6 +250,7 @@ var views = {
     clienteDetailView.render(id);
   },
   dashboard() { dashboardView.render(); },
+  vau() { vauView.render(); },
   config() {
     views._configRender();
   },
@@ -571,6 +572,132 @@ function fmtBRLshort(v) {
 var UFS = ["AC","AL","AM","AP","BA","CE","DF","ES","GO","MA","MG","MS","MT","PA","PB","PE","PI","PR","RJ","RN","RO","RR","RS","SC","SE","SP","TO"];
 
 // ============================================================
+// FUNDAMENTAÇÃO NORMATIVA (M3) — Onda 4
+// ============================================================
+function fmtBRL2(v) {
+  var n = parseFloat(v) || 0;
+  return "R$ " + n.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function buildFundamentacao(l) {
+  var vau = parseFloat(l.vau) || 0;
+  var co  = parseFloat(l.co)  || 0;
+  var rmt = parseFloat(l.rmt) || 0;
+  var cmo = parseFloat(l.cmo_pct) || 0;
+  var cat = parseFloat(l.pct_categoria) || 0;
+  var fs  = parseFloat(l.fator_social_pct) || 0;
+  var aliq = parseFloat(l.aliquota_pct) || 0;
+  var red = parseFloat(l.reducao_pre_fab_pct) || 0;
+  var area = parseFloat(l.area_total) || parseFloat(l.a_construcao) || 0;
+  var direto = parseFloat(l.inss_direto) || 0;
+  var reduzido = parseFloat(l.inss_reduzido) || 0;
+  var econ = parseFloat(l.economia) || (direto - reduzido);
+  var econPct = direto > 0 ? Math.round((econ / direto) * 100) : 0;
+
+  var rows = [
+    {
+      titulo: "VAU — Valor Aferido Unitário",
+      valor: fmtBRL2(vau) + " /m²",
+      formula: "Publicado anualmente pela Receita Federal por UF e destinação.",
+      base: "Anexo I da IN RFB nº 2.021/2021 (atualizado em " + (l._vauPeriodo || "maio/2026") + ")."
+    },
+    {
+      titulo: "CO — Custo da Obra",
+      valor: fmtBRL2(co),
+      formula: "CO = VAU × área total → " + fmtBRL2(vau) + " × " + (area ? area.toLocaleString("pt-BR") + " m²" : "—") + " = " + fmtBRL2(co) + ".",
+      base: "Art. 12 da IN RFB nº 2.021/2021."
+    },
+    {
+      titulo: "RMT — Remuneração da Mão de Obra",
+      valor: fmtBRL2(rmt),
+      formula: "RMT = CO × CMO% → " + fmtBRL2(co) + " × " + cmo.toFixed(2) + "% = " + fmtBRL2(rmt) + ".",
+      base: "Art. 15 e Anexo III da IN RFB nº 2.021/2021."
+    },
+    {
+      titulo: "CMO — Coeficiente de Mão de Obra",
+      valor: cmo.toFixed(2) + "%",
+      formula: "Definido pelo tipo construtivo: " + (l.tipo || "—") + (l.concreto === "Sim" ? " com concreto pré-fabricado" : "") + ".",
+      base: "Anexo III da IN RFB nº 2.021/2021."
+    },
+    {
+      titulo: "Categoria — Redução pela destinação",
+      valor: cat.toFixed(2) + "%",
+      formula: "Destinação: " + (l.dest || "—") + ". Reduz a base de cálculo conforme tipo de uso.",
+      base: "Anexo IV da IN RFB nº 2.021/2021."
+    },
+    {
+      titulo: "Fator Social",
+      valor: fs.toFixed(2) + "%",
+      formula: "Aplicado a obras de menor porte e cunho social. Reduz adicional da contribuição.",
+      base: "Anexo VII da IN RFB nº 2.021/2021."
+    },
+    {
+      titulo: "Alíquota previdenciária total",
+      valor: aliq.toFixed(2) + "%",
+      formula: "Soma de contribuição patronal, segurados (empregados, contribuintes individuais) e GILRAT.",
+      base: "Art. 22 da Lei nº 8.212/91 c/c arts. 200 e seguintes do Decreto nº 3.048/99."
+    }
+  ];
+  if (red > 0) {
+    rows.push({
+      titulo: "Redução adicional — Pré-fabricados",
+      valor: red.toFixed(2) + "%",
+      formula: "Obra com uso de concreto usinado/pré-fabricado tem redução adicional na base de cálculo.",
+      base: "Art. 18 da IN RFB nº 2.021/2021."
+    });
+  }
+
+  var html = '<div class="fund-grid" style="display:grid;gap:10px;">';
+  rows.forEach(function (r) {
+    html += '<div class="fund-row" style="border-left:3px solid var(--primary);padding:8px 12px;background:#f8fafc;border-radius:6px;">' +
+            '<div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;">' +
+              '<strong style="font-size:13px;">' + escapeHtml(r.titulo) + '</strong>' +
+              '<span style="font-size:14px;font-weight:700;color:var(--primary);">' + escapeHtml(r.valor) + '</span>' +
+            '</div>' +
+            '<div style="font-size:12px;color:var(--muted);margin-top:4px;">' + escapeHtml(r.formula) + '</div>' +
+            '<div style="font-size:11px;color:var(--muted);margin-top:2px;font-style:italic;">📜 ' + escapeHtml(r.base) + '</div>' +
+            '</div>';
+  });
+  html += '</div>';
+
+  html += '<hr style="margin:14px 0;border:none;border-top:1px solid var(--border)">';
+  html += '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;text-align:center;">' +
+          '<div style="padding:10px;background:#fee2e2;border-radius:6px;"><div style="font-size:11px;color:var(--muted);">SEM redução</div><div style="font-size:15px;font-weight:800;color:#b91c1c;">' + fmtBRL2(direto) + '</div></div>' +
+          '<div style="padding:10px;background:#dcfce7;border-radius:6px;"><div style="font-size:11px;color:var(--muted);">COM redução legal</div><div style="font-size:15px;font-weight:800;color:#166534;">' + fmtBRL2(reduzido) + '</div></div>' +
+          '<div style="padding:10px;background:#fef3c7;border-radius:6px;"><div style="font-size:11px;color:var(--muted);">Economia (' + econPct + '%)</div><div style="font-size:15px;font-weight:800;color:#92400e;">' + fmtBRL2(econ) + '</div></div>' +
+          '</div>';
+  return html;
+}
+
+function fundamentacaoTexto(l) {
+  var area = parseFloat(l.area_total) || parseFloat(l.a_construcao) || 0;
+  var vau = parseFloat(l.vau) || 0;
+  var co = parseFloat(l.co) || 0;
+  var rmt = parseFloat(l.rmt) || 0;
+  var direto = parseFloat(l.inss_direto) || 0;
+  var reduzido = parseFloat(l.inss_reduzido) || 0;
+  var econ = parseFloat(l.economia) || (direto - reduzido);
+  var econPct = direto > 0 ? Math.round((econ / direto) * 100) : 0;
+
+  return "*Fundamentação do cálculo do INSS da sua obra*\n\n" +
+    "Olá " + (l.nome || "").split(" ")[0] + "! Segue a base técnica do cálculo que enviei:\n\n" +
+    "📐 *Área total:* " + (area ? area.toLocaleString("pt-BR") + " m²" : "—") + "\n" +
+    "🏗️ *Tipo de obra:* " + (l.tipo || "—") + (l.concreto === "Sim" ? " (com pré-fab)" : "") + "\n" +
+    "🏠 *Destinação:* " + (l.dest || "—") + "\n\n" +
+    "*Como foi calculado* (IN RFB nº 2.021/2021):\n" +
+    "1. VAU (Valor Aferido Unitário) " + fmtBRL2(vau) + "/m² (Anexo I)\n" +
+    "2. CO (Custo da Obra) = VAU × área = " + fmtBRL2(co) + " (art. 12)\n" +
+    "3. RMT (Remuneração Mão de Obra) = CO × CMO% = " + fmtBRL2(rmt) + " (art. 15 + Anexo III)\n" +
+    "4. Aplicação da Categoria, Fator Social e Alíquota previdenciária\n\n" +
+    "*Resultado:*\n" +
+    "❌ Imposto SEM redução: *" + fmtBRL2(direto) + "*\n" +
+    "✅ Imposto COM redução legal: *" + fmtBRL2(reduzido) + "*\n" +
+    "💰 Economia: *" + fmtBRL2(econ) + "* (" + econPct + "%)\n\n" +
+    "Toda a redução é prevista em lei e aplicada dentro das normas da Receita Federal — sem nenhum tipo de sonegação.\n\n" +
+    "_Imposto & Obra Consultoria_";
+}
+
+// ============================================================
 // KANBAN
 // ============================================================
 var kanbanView = {
@@ -865,6 +992,16 @@ var leadDetailView = {
       var econPct = inssDir > 0 ? Math.round((econ / inssDir) * 100) : 0;
       html += '<div class="field-row single"><div><label>Economia (R$)</label><input type="number" step="0.01" id="f-econ" value="' + escapeHtml(l.economia || 0) + '"/> <small class="muted">' + econPct + '% de economia</small></div></div>';
       html += '</div>';
+
+      // === Fundamentação Normativa (M3) ===
+      html += '<div class="detail-card"><h3>🔍 Fundamentação do cálculo</h3>';
+      html += '<p class="muted" style="font-size:12px;margin:-6px 0 12px;">Base normativa de cada componente — texto pronto pra explicar ao cliente.</p>';
+      html += buildFundamentacao(l);
+      html += '<div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;">' +
+              '<button class="btn btn-sm" id="lead-copy-fund">📋 Copiar texto</button>' +
+              '<button class="btn btn-sm ghost" id="lead-wa-fund">📱 Enviar por WhatsApp</button>' +
+              '</div>';
+      html += '</div>';
     }
 
     html += '</div><div><div class="detail-card"><h3>Timeline</h3>';
@@ -944,6 +1081,28 @@ var leadDetailView = {
 
     var propBtn = $("lead-proposta");
     if (propBtn) propBtn.onclick = function () { modalProposta.open({ tipo: "lead", obj: l }); };
+
+    var copyFund = $("lead-copy-fund");
+    if (copyFund) copyFund.onclick = function () {
+      var txt = fundamentacaoTexto(l);
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(txt).then(function () {
+          toast("Texto copiado para a área de transferência.", "success");
+        }, function () {
+          toast("Não consegui copiar. Selecione manualmente.", "error");
+        });
+      } else {
+        toast("Clipboard API não disponível. Use um navegador mais recente.", "error");
+      }
+    };
+    var waFund = $("lead-wa-fund");
+    if (waFund) waFund.onclick = function () {
+      var ddd = String(l.ddd || "").replace(/\D/g, "");
+      var num = String(l.whatsapp || "").replace(/\D/g, "");
+      if (!ddd || !num) { toast("Lead sem telefone.", "error"); return; }
+      var txt = fundamentacaoTexto(l);
+      window.open("https://wa.me/55" + ddd + num + "?text=" + encodeURIComponent(txt), "_blank", "noopener");
+    };
 
     $("btn-add-nota").onclick = async function () {
       var nota = $("nova-nota").value.trim();
@@ -1889,6 +2048,119 @@ var modalContrato = {
 
 
 // ============================================================
+// VAU — Tabela oficial (admin) — Onda 4 (M4)
+// ============================================================
+var vauView = {
+  data: [],
+  vigencia: "",
+
+  render: async function () {
+    $("view").innerHTML = '<div class="placeholder">Carregando tabela VAU...</div>';
+    try {
+      var rows = await api.call("vau.list");
+      vauView.data = rows || [];
+      var firstVig = vauView.data[0] && vauView.data[0].vigencia;
+      vauView.vigencia = firstVig || "—";
+      vauView.draw();
+    } catch (e) {
+      $("view").innerHTML = '<div class="placeholder"><h2>Erro</h2><p>' + escapeHtml(e.message || e) + '</p></div>';
+    }
+  },
+
+  draw: function () {
+    var profile = state.profile || {};
+    var isAdmin = String(profile.perfil || "").toLowerCase() === "admin";
+
+    var html = '<div class="config-view">';
+    html += '<h2 style="margin:0 0 6px;">Tabela VAU — Valor Aferido Unitário</h2>';
+    html += '<p class="muted" style="font-size:13px;margin:0 0 14px;">' +
+            'Valores oficiais publicados pela Receita Federal (R$/m² por UF e destinação). ' +
+            (isAdmin ? 'Admins podem editar; mudanças propagam para a calculadora pública em até 30 minutos.' : 'Somente leitura.') +
+            '</p>';
+
+    html += '<div style="display:flex;gap:12px;align-items:center;margin-bottom:12px;flex-wrap:wrap;">';
+    html += '<label style="font-size:12px;font-weight:600;">Vigência:</label>';
+    html += '<input type="text" id="vau-vigencia" value="' + escapeHtml(vauView.vigencia) + '" placeholder="ex.: Maio/2026" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;font:inherit;font-size:13px;width:160px;"' + (isAdmin ? '' : ' disabled') + '>';
+    if (isAdmin) html += '<button class="btn btn-sm" id="vau-save-vigencia">Aplicar vigência a todas as UFs</button>';
+    html += '</div>';
+
+    html += '<div style="overflow-x:auto;border:1px solid var(--border);border-radius:8px;background:#fff;">';
+    html += '<table class="users-table" style="min-width:980px;"><thead><tr>' +
+            '<th>UF</th>' +
+            '<th>Casa Popular</th>' +
+            '<th>Comercial</th>' +
+            '<th>Conj. Popular</th>' +
+            '<th>Galpão Ind.</th>' +
+            '<th>Res. Multi</th>' +
+            '<th>Res. Uni</th>' +
+            '<th>Garagens</th>' +
+            (isAdmin ? '<th></th>' : '') +
+            '</tr></thead><tbody>';
+
+    var ufsSorted = vauView.data.slice().sort(function (a, b) { return String(a.uf).localeCompare(String(b.uf)); });
+    ufsSorted.forEach(function (r) {
+      var uf = String(r.uf || "").toUpperCase();
+      html += '<tr>';
+      html += '<td><strong>' + escapeHtml(uf) + '</strong></td>';
+      ["casa_popular","comercial","conj_pop","galpao","res_multi","res_uni","garagens"].forEach(function (c) {
+        var v = parseFloat(r[c]) || 0;
+        html += '<td><input type="number" step="0.01" min="0" data-vau-uf="' + uf + '" data-vau-col="' + c + '" value="' + v.toFixed(2) + '" style="width:90px;padding:4px 6px;border:1px solid var(--border);border-radius:4px;font:inherit;font-size:12px;text-align:right;"' + (isAdmin ? '' : ' disabled') + '></td>';
+      });
+      if (isAdmin) html += '<td><button class="btn btn-sm ghost" data-vau-save="' + uf + '">💾</button></td>';
+      html += '</tr>';
+    });
+    html += '</tbody></table></div>';
+
+    html += '<p class="muted" style="font-size:12px;margin-top:14px;">' +
+            'A calculadora pública (impostoeobra.com.br) busca esta tabela via endpoint <code>vau.public</code> com cache de 30 minutos. ' +
+            'Para forçar atualização imediata, basta dar reload duro (Ctrl+Shift+R) na página da calculadora.' +
+            '</p>';
+    html += '</div>';
+    $("view").innerHTML = html;
+
+    if (!isAdmin) return;
+
+    document.querySelectorAll("[data-vau-save]").forEach(function (btn) {
+      btn.onclick = async function () {
+        var uf = btn.dataset.vauSave;
+        var patch = { uf: uf };
+        document.querySelectorAll('[data-vau-uf="' + uf + '"]').forEach(function (inp) {
+          patch[inp.dataset.vauCol] = parseFloat(inp.value) || 0;
+        });
+        patch.vigencia = $("vau-vigencia").value.trim() || vauView.vigencia;
+        btn.disabled = true;
+        try {
+          await api.call("vau.set", patch);
+          toast("UF " + uf + " salva.", "success");
+        } catch (e) {
+          toast("Erro: " + (e.message || e), "error");
+        }
+        btn.disabled = false;
+      };
+    });
+
+    var vigBtn = $("vau-save-vigencia");
+    if (vigBtn) vigBtn.onclick = async function () {
+      var vig = $("vau-vigencia").value.trim();
+      if (!vig) { toast("Informe a vigência.", "error"); return; }
+      vigBtn.disabled = true;
+      try {
+        for (var i = 0; i < vauView.data.length; i++) {
+          var uf = String(vauView.data[i].uf || "").toUpperCase();
+          await api.call("vau.set", { uf: uf, vigencia: vig });
+        }
+        toast("Vigência aplicada a todas as UFs.", "success");
+        vauView.render();
+      } catch (e) {
+        toast("Erro: " + (e.message || e), "error");
+        vigBtn.disabled = false;
+      }
+    };
+  }
+};
+
+
+// ============================================================
 // ENTREGA 5 — DASHBOARD GERENCIAL
 // ============================================================
 var dashboardView = {
@@ -1899,15 +2171,9 @@ var dashboardView = {
     var f = dashboardView.filtros;
     var hoje = new Date();
     var de = "";
-    if (f.periodo === "30d") {
-      var d30 = new Date(); d30.setDate(d30.getDate() - 30);
-      de = d30.toISOString().substring(0, 10);
-    } else if (f.periodo === "90d") {
-      var d90 = new Date(); d90.setDate(d90.getDate() - 90);
-      de = d90.toISOString().substring(0, 10);
-    } else if (f.periodo === "ano") {
-      de = hoje.getFullYear() + "-01-01";
-    }
+    if (f.periodo === "30d") { var d30 = new Date(); d30.setDate(d30.getDate() - 30); de = d30.toISOString().substring(0, 10); }
+    else if (f.periodo === "90d") { var d90 = new Date(); d90.setDate(d90.getDate() - 90); de = d90.toISOString().substring(0, 10); }
+    else if (f.periodo === "ano") { de = hoje.getFullYear() + "-01-01"; }
 
     var html = '<div class="dash-toolbar">' +
       '<label style="font-size:12px;font-weight:600">Período:</label>' +
@@ -1923,42 +2189,30 @@ var dashboardView = {
     html += '<div id="dash-content"></div>';
     $("view").innerHTML = html;
 
-    $("dash-periodo").onchange = function (e) {
-      dashboardView.filtros.periodo = e.target.value;
-      dashboardView.render();
-    };
+    $("dash-periodo").onchange = function (e) { dashboardView.filtros.periodo = e.target.value; dashboardView.render(); };
     $("dash-refresh").onclick = function () { dashboardView.render(); };
-
     dashboardView.carregar(de);
   },
 
   carregar: async function (de) {
     try {
       var d = await api.call("dashboard.kpis", { de: de });
-
-      var fmtBRL = function (v) {
-        var n = parseFloat(v) || 0;
-        return "R$ " + n.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-      };
       var fmtBRLcompact = function (v) {
         var n = parseFloat(v) || 0;
         if (n >= 1000000) return "R$ " + (n / 1000000).toFixed(1).replace(".", ",") + "M";
         if (n >= 1000)    return "R$ " + (n / 1000).toFixed(1).replace(".", ",") + "k";
         return "R$ " + n.toLocaleString("pt-BR", { maximumFractionDigits: 0 });
       };
-
       var c = d.cards || {};
       var aReceber = (parseFloat(c.total_vendido) || 0) - (parseFloat(c.total_pago) || 0);
 
       var cardsHtml = '<div class="kpi-grid">' +
         '<div class="kpi-card"><div class="lbl">Leads</div><div class="val">' + (c.total_leads || 0) + '</div></div>' +
         '<div class="kpi-card"><div class="lbl">Propostas Enviadas</div><div class="val">' + (c.propostas || 0) + '</div></div>' +
-        '<div class="kpi-card success"><div class="lbl">Fechados Ganhos</div><div class="val">' + (c.ganhos || 0) + '</div>' +
-          '<div class="sub">' + (c.taxa_conversao || 0) + '% conversão</div></div>' +
+        '<div class="kpi-card success"><div class="lbl">Fechados Ganhos</div><div class="val">' + (c.ganhos || 0) + '</div><div class="sub">' + (c.taxa_conversao || 0) + '% conversão</div></div>' +
         '<div class="kpi-card danger"><div class="lbl">Perdidos / Sem retorno</div><div class="val">' + (c.perdidos || 0) + '</div></div>' +
         '<div class="kpi-card primary"><div class="lbl">Ticket Médio</div><div class="val">' + fmtBRLcompact(c.ticket_medio) + '</div></div>' +
-        '<div class="kpi-card primary"><div class="lbl">Total Vendido</div><div class="val">' + fmtBRLcompact(c.total_vendido) + '</div>' +
-          '<div class="sub">' + (c.contratos_ativos || 0) + ' contratos</div></div>' +
+        '<div class="kpi-card primary"><div class="lbl">Total Vendido</div><div class="val">' + fmtBRLcompact(c.total_vendido) + '</div><div class="sub">' + (c.contratos_ativos || 0) + ' contratos</div></div>' +
         '<div class="kpi-card success"><div class="lbl">Total Pago</div><div class="val">' + fmtBRLcompact(c.total_pago) + '</div></div>' +
         '<div class="kpi-card warning"><div class="lbl">A Receber</div><div class="val">' + fmtBRLcompact(aReceber) + '</div></div>' +
         '</div>';
@@ -1975,15 +2229,11 @@ var dashboardView = {
       $("dash-content").innerHTML = cardsHtml + chartsHtml;
       $("dash-status").textContent = "Atualizado " + new Date().toLocaleTimeString("pt-BR").substring(0, 5);
 
-      Object.keys(dashboardView.charts).forEach(function (k) {
-        try { dashboardView.charts[k].destroy(); } catch (_) {}
-      });
+      Object.keys(dashboardView.charts).forEach(function (k) { try { dashboardView.charts[k].destroy(); } catch (_) {} });
       dashboardView.charts = {};
-
       if (typeof Chart === "undefined") { console.warn("Chart.js não carregado"); return; }
 
       var COMMON = { responsive: true, maintainAspectRatio: false };
-
       var fnl = d.funil || [];
       dashboardView.charts.funil = new Chart($("ch-funil"), {
         type: "bar",
@@ -1991,56 +2241,45 @@ var dashboardView = {
                 datasets: [{ label: "Leads", data: fnl.map(function (x) { return x.count; }), backgroundColor: "#0071E3" }] },
         options: Object.assign({}, COMMON, { indexAxis: "y", plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true, ticks: { precision: 0 } } } })
       });
-
       var pm = d.por_mes || {};
       var meses = Object.keys(pm).sort();
       dashboardView.charts.mes = new Chart($("ch-mes"), {
         type: "line",
-        data: { labels: meses,
-                datasets: [{ label: "Leads", data: meses.map(function (m) { return pm[m].leads; }),
-                             borderColor: "#0071E3", backgroundColor: "rgba(0,113,227,.12)", tension: 0.3, fill: true }] },
+        data: { labels: meses, datasets: [{ label: "Leads", data: meses.map(function (m) { return pm[m].leads; }),
+                       borderColor: "#0071E3", backgroundColor: "rgba(0,113,227,.12)", tension: 0.3, fill: true }] },
         options: Object.assign({}, COMMON, { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } })
       });
-
       var uf = d.por_uf || {};
       var ufKeys = Object.keys(uf).sort(function (a, b) { return uf[b] - uf[a]; }).slice(0, 12);
       dashboardView.charts.uf = new Chart($("ch-uf"), {
         type: "bar",
-        data: { labels: ufKeys,
-                datasets: [{ label: "Leads", data: ufKeys.map(function (k) { return uf[k]; }), backgroundColor: "#006AE0" }] },
+        data: { labels: ufKeys, datasets: [{ label: "Leads", data: ufKeys.map(function (k) { return uf[k]; }), backgroundColor: "#006AE0" }] },
         options: Object.assign({}, COMMON, { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } })
       });
-
       var pp = d.por_produto || {};
       var ppK = Object.keys(pp);
       dashboardView.charts.prod = new Chart($("ch-prod"), {
         type: "doughnut",
-        data: { labels: ppK,
-                datasets: [{ data: ppK.map(function (k) { return pp[k]; }),
-                             backgroundColor: ["#0071E3", "#FFD439", "#16a34a", "#ef4444", "#a855f7", "#06b6d4"] }] },
+        data: { labels: ppK, datasets: [{ data: ppK.map(function (k) { return pp[k]; }),
+                       backgroundColor: ["#0071E3", "#FFD439", "#16a34a", "#ef4444", "#a855f7", "#06b6d4"] }] },
         options: Object.assign({}, COMMON, { plugins: { legend: { position: "bottom" } } })
       });
-
       var po = d.por_origem || {};
       var poK = Object.keys(po);
       dashboardView.charts.orig = new Chart($("ch-orig"), {
         type: "doughnut",
-        data: { labels: poK,
-                datasets: [{ data: poK.map(function (k) { return po[k]; }),
-                             backgroundColor: ["#0071E3", "#FFD439", "#64748b", "#16a34a", "#ef4444"] }] },
+        data: { labels: poK, datasets: [{ data: poK.map(function (k) { return po[k]; }),
+                       backgroundColor: ["#0071E3", "#FFD439", "#64748b", "#16a34a", "#ef4444"] }] },
         options: Object.assign({}, COMMON, { plugins: { legend: { position: "bottom" } } })
       });
-
       dashboardView.charts.conv = new Chart($("ch-conv"), {
         type: "bar",
-        data: { labels: meses,
-                datasets: [
+        data: { labels: meses, datasets: [
                   { label: "Leads",  data: meses.map(function (m) { return pm[m].leads;  }), backgroundColor: "#0071E3" },
                   { label: "Ganhos", data: meses.map(function (m) { return pm[m].ganhos; }), backgroundColor: "#16a34a" }
                 ] },
         options: Object.assign({}, COMMON, { scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } })
       });
-
     } catch (e) {
       $("dash-status").textContent = "Erro: " + (e.message || e);
       console.error(e);
