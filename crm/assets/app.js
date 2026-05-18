@@ -224,10 +224,24 @@ var router = {
   handle() {
     var hash = (location.hash || "#kanban").replace(/^#/, "");
     var route = hash.split("/")[0] || "kanban";
-    // Highlight do nav
+
+    // Bloqueia rotas só de admin para não-admins
+    var profile = state.profile || {};
+    var isAdmin = String(profile.perfil || "").toLowerCase() === "admin";
+    var rotasAdminSomente = ["config", "vau"];
+    if (!isAdmin && rotasAdminSomente.indexOf(route) >= 0) {
+      location.hash = "#kanban";
+      return;
+    }
+
+    // Aplica visibilidade dos links no menu conforme perfil
     document.querySelectorAll("#topbar-nav a").forEach(function (a) {
-      a.classList.toggle("active", a.dataset.route === route);
+      var r = a.dataset.route;
+      var soAdmin = rotasAdminSomente.indexOf(r) >= 0;
+      a.style.display = (soAdmin && !isAdmin) ? "none" : "";
+      a.classList.toggle("active", r === route);
     });
+
     var fn = views[route] || views.notfound;
     fn();
   },
