@@ -304,6 +304,12 @@ var views = {
       html += '<div class="config-row"><div class="field"><label>Produtos ativos (separados por vírgula)</label>' +
               '<input type="text" id="cfg-produtos" value="' + escapeHtml(cfg.produtos || "") + '" /></div></div>';
 
+      html += '<div class="config-row"><div class="field"><label>E-mail da empresa (rodapé do Material de Apoio)</label>' +
+              '<input type="text" id="cfg-email-emp" value="' + escapeHtml(cfg.email_empresa || "") + '" placeholder="contato@impostoeobra.com.br" /></div></div>';
+
+      html += '<div class="config-row"><div class="field"><label>Endereço da empresa (rodapé do Material de Apoio)</label>' +
+              '<input type="text" id="cfg-end-emp" value="' + escapeHtml(cfg.endereco_empresa || "") + '" placeholder="Rua Pais Leme 215, Conj. 1713, Pinheiros-SP." /></div></div>';
+
       html += '<div><button class="btn" id="btn-save-server-cfg">Salvar parâmetros</button></div>';
       html += '</div>';
 
@@ -354,6 +360,8 @@ var views = {
           await api.call("config.set", { chave: "msg_whatsapp_padrao",valor: $("cfg-msg-whats").value });
           await api.call("config.set", { chave: "etapas_funil",       valor: $("cfg-etapas").value.trim() });
           await api.call("config.set", { chave: "produtos",           valor: $("cfg-produtos").value.trim() });
+          await api.call("config.set", { chave: "email_empresa",      valor: $("cfg-email-emp").value.trim() });
+          await api.call("config.set", { chave: "endereco_empresa",   valor: $("cfg-end-emp").value.trim() });
           state.serverConfig = await api.call("config.get");
           // refresh dos stores que usam config (etapas/produtos) e da view atual
           if (typeof leadsStore !== "undefined" && leadsStore.refresh) leadsStore.refresh(true);
@@ -1706,26 +1714,26 @@ var dashboardView = {
       var c = d.cards || {};
       var aReceber = (parseFloat(c.total_vendido) || 0) - (parseFloat(c.total_pago) || 0);
 
-      var cardsHtml = '<div class="dash-cards">' +
-        '<div class="dash-card"><div class="dash-card-lbl">Leads</div><div class="dash-card-val">' + (c.total_leads || 0) + '</div></div>' +
-        '<div class="dash-card"><div class="dash-card-lbl">Propostas Enviadas</div><div class="dash-card-val">' + (c.propostas || 0) + '</div></div>' +
-        '<div class="dash-card"><div class="dash-card-lbl">Fechados Ganhos</div><div class="dash-card-val">' + (c.ganhos || 0) + '</div>' +
-          '<div class="dash-card-sub">' + (c.taxa_conversao || 0) + '% conversão</div></div>' +
-        '<div class="dash-card"><div class="dash-card-lbl">Perdidos / Sem retorno</div><div class="dash-card-val">' + (c.perdidos || 0) + '</div></div>' +
-        '<div class="dash-card"><div class="dash-card-lbl">Ticket Médio</div><div class="dash-card-val">' + fmtBRLcompact(c.ticket_medio) + '</div></div>' +
-        '<div class="dash-card"><div class="dash-card-lbl">Total Vendido</div><div class="dash-card-val">' + fmtBRLcompact(c.total_vendido) + '</div>' +
-          '<div class="dash-card-sub">' + (c.contratos_ativos || 0) + ' contratos</div></div>' +
-        '<div class="dash-card"><div class="dash-card-lbl">Total Pago</div><div class="dash-card-val">' + fmtBRLcompact(c.total_pago) + '</div></div>' +
-        '<div class="dash-card"><div class="dash-card-lbl">A Receber</div><div class="dash-card-val">' + fmtBRLcompact(aReceber) + '</div></div>' +
+      var cardsHtml = '<div class="kpi-grid">' +
+        '<div class="kpi-card"><div class="lbl">Leads</div><div class="val">' + (c.total_leads || 0) + '</div></div>' +
+        '<div class="kpi-card"><div class="lbl">Propostas Enviadas</div><div class="val">' + (c.propostas || 0) + '</div></div>' +
+        '<div class="kpi-card success"><div class="lbl">Fechados Ganhos</div><div class="val">' + (c.ganhos || 0) + '</div>' +
+          '<div class="sub">' + (c.taxa_conversao || 0) + '% conversão</div></div>' +
+        '<div class="kpi-card danger"><div class="lbl">Perdidos / Sem retorno</div><div class="val">' + (c.perdidos || 0) + '</div></div>' +
+        '<div class="kpi-card primary"><div class="lbl">Ticket Médio</div><div class="val">' + fmtBRLcompact(c.ticket_medio) + '</div></div>' +
+        '<div class="kpi-card primary"><div class="lbl">Total Vendido</div><div class="val">' + fmtBRLcompact(c.total_vendido) + '</div>' +
+          '<div class="sub">' + (c.contratos_ativos || 0) + ' contratos</div></div>' +
+        '<div class="kpi-card success"><div class="lbl">Total Pago</div><div class="val">' + fmtBRLcompact(c.total_pago) + '</div></div>' +
+        '<div class="kpi-card warning"><div class="lbl">A Receber</div><div class="val">' + fmtBRLcompact(aReceber) + '</div></div>' +
         '</div>';
 
-      var chartsHtml = '<div class="dash-charts">' +
-        '<div class="dash-chart"><h4>Funil Comercial</h4><canvas id="ch-funil"></canvas></div>' +
-        '<div class="dash-chart"><h4>Leads por Mês</h4><canvas id="ch-mes"></canvas></div>' +
-        '<div class="dash-chart"><h4>Por Estado (UF)</h4><canvas id="ch-uf"></canvas></div>' +
-        '<div class="dash-chart"><h4>Por Produto</h4><canvas id="ch-prod"></canvas></div>' +
-        '<div class="dash-chart"><h4>Origem dos Leads</h4><canvas id="ch-orig"></canvas></div>' +
-        '<div class="dash-chart"><h4>Conversão por Mês</h4><canvas id="ch-conv"></canvas></div>' +
+      var chartsHtml = '<div class="chart-grid">' +
+        '<div class="chart-card"><h3>Funil Comercial</h3><canvas id="ch-funil"></canvas></div>' +
+        '<div class="chart-card"><h3>Leads por Mês</h3><canvas id="ch-mes"></canvas></div>' +
+        '<div class="chart-card"><h3>Por Estado (UF)</h3><canvas id="ch-uf"></canvas></div>' +
+        '<div class="chart-card"><h3>Por Produto</h3><canvas id="ch-prod"></canvas></div>' +
+        '<div class="chart-card"><h3>Origem dos Leads</h3><canvas id="ch-orig"></canvas></div>' +
+        '<div class="chart-card"><h3>Conversão por Mês</h3><canvas id="ch-conv"></canvas></div>' +
         '</div>';
 
       $("dash-content").innerHTML = cardsHtml + chartsHtml;
@@ -1742,6 +1750,8 @@ var dashboardView = {
         return;
       }
 
+      var COMMON = { responsive: true, maintainAspectRatio: false };
+
       // Funil (barras horizontais)
       var fnl = d.funil || [];
       dashboardView.charts.funil = new Chart($("ch-funil"), {
@@ -1750,7 +1760,11 @@ var dashboardView = {
           labels: fnl.map(function (x) { return x.status; }),
           datasets: [{ label: "Leads", data: fnl.map(function (x) { return x.count; }), backgroundColor: "#0071E3" }]
         },
-        options: { indexAxis: "y", plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true, ticks: { precision: 0 } } } }
+        options: Object.assign({}, COMMON, {
+          indexAxis: "y",
+          plugins: { legend: { display: false } },
+          scales: { x: { beginAtZero: true, ticks: { precision: 0 } } }
+        })
       });
 
       // Leads por mês (linha)
@@ -1763,7 +1777,10 @@ var dashboardView = {
           datasets: [{ label: "Leads", data: meses.map(function (m) { return pm[m].leads; }),
                        borderColor: "#0071E3", backgroundColor: "rgba(0,113,227,.12)", tension: 0.3, fill: true }]
         },
-        options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
+        options: Object.assign({}, COMMON, {
+          plugins: { legend: { display: false } },
+          scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
+        })
       });
 
       // Por UF (top 12 — barras)
@@ -1775,7 +1792,10 @@ var dashboardView = {
           labels: ufKeys,
           datasets: [{ label: "Leads", data: ufKeys.map(function (k) { return uf[k]; }), backgroundColor: "#006AE0" }]
         },
-        options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
+        options: Object.assign({}, COMMON, {
+          plugins: { legend: { display: false } },
+          scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
+        })
       });
 
       // Por produto (donut)
@@ -1788,7 +1808,7 @@ var dashboardView = {
           datasets: [{ data: ppK.map(function (k) { return pp[k]; }),
                        backgroundColor: ["#0071E3", "#FFD439", "#16a34a", "#ef4444", "#a855f7", "#06b6d4"] }]
         },
-        options: { plugins: { legend: { position: "bottom" } } }
+        options: Object.assign({}, COMMON, { plugins: { legend: { position: "bottom" } } })
       });
 
       // Origem (donut)
@@ -1801,7 +1821,7 @@ var dashboardView = {
           datasets: [{ data: poK.map(function (k) { return po[k]; }),
                        backgroundColor: ["#0071E3", "#FFD439", "#64748b", "#16a34a", "#ef4444"] }]
         },
-        options: { plugins: { legend: { position: "bottom" } } }
+        options: Object.assign({}, COMMON, { plugins: { legend: { position: "bottom" } } })
       });
 
       // Conversão por mês (barras pareadas)
@@ -1814,7 +1834,9 @@ var dashboardView = {
             { label: "Ganhos", data: meses.map(function (m) { return pm[m].ganhos; }), backgroundColor: "#16a34a" }
           ]
         },
-        options: { scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
+        options: Object.assign({}, COMMON, {
+          scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
+        })
       });
 
     } catch (e) {
