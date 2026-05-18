@@ -731,6 +731,7 @@ var leadDetailView = {
     html += '<div style="margin-top:8px;font-size:12px;color:var(--muted);">Origem: <strong>' + escapeHtml(l.origem || "—") + '</strong></div>';
     html += '</div><div class="lead-detail-actions">';
     if (waUrl) html += '<a class="btn success" href="' + waUrl + '" target="_blank" rel="noopener">📱 WhatsApp</a>';
+    html += '<button class="btn" id="lead-material">📄 Material de Apoio</button>';
     if (!l.cliente_id) html += '<button class="btn" id="lead-convert">Converter em Cliente</button>';
     else html += '<span class="muted" style="padding:8px;">→ Cliente #' + escapeHtml(l.cliente_id) + '</span>';
     html += '<button class="btn ghost" id="lead-save">💾 Salvar</button>';
@@ -888,6 +889,9 @@ var leadDetailView = {
     var convertBtn = $("lead-convert");
     if (convertBtn) convertBtn.onclick = function () { conversionWizard.open(l); };
 
+    var matBtn = $("lead-material");
+    if (matBtn) matBtn.onclick = function () { modalMaterial.open(l); };
+
     $("btn-add-nota").onclick = async function () {
       var nota = $("nova-nota").value.trim();
       if (!nota) return;
@@ -948,6 +952,128 @@ var modalLead = {
     };
   }
 };
+
+// ============================================================
+// MODAL MATERIAL DE APOIO (PDF infográfico)
+// ============================================================
+var modalMaterial = {
+  open: function (lead) {
+    if (!lead) return;
+    var inssDir = parseFloat(lead.inss_direto) || 0;
+    var inssRed = parseFloat(lead.inss_reduzido) || 0;
+    var econ    = parseFloat(lead.economia)     || (inssDir - inssRed);
+    var pisc    = (parseFloat(lead.a_pcoberta) || 0) + (parseFloat(lead.a_pdescoberta) || 0);
+
+    var html = '<div class="modal-backdrop" id="modal-bg"><div class="modal-content" style="max-width:520px;">';
+    html += '<h3>📄 Gerar Material de Apoio</h3>';
+    html += '<p class="muted" style="font-size:13px;margin:-4px 0 10px;">Confirme os dados antes de gerar o PDF.</p>';
+
+    html += '<div class="field-row">' +
+            '<div><label>Cliente</label><input type="text" id="mat-nome" value="' + escapeHtml(lead.nome || "") + '"/></div>' +
+            '<div><label>Área constr. (m²)</label><input type="number" step="0.01" id="mat-area" value="' + (parseFloat(lead.a_construcao) || 0) + '"/></div></div>';
+
+    html += '<div class="field-row">' +
+            '<div><label>Imposto direto (R$)</label><input type="number" step="0.01" id="mat-cheio" value="' + inssDir.toFixed(2) + '"/></div>' +
+            '<div><label>Imposto reduzido (R$)</label><input type="number" step="0.01" id="mat-red" value="' + inssRed.toFixed(2) + '"/></div></div>';
+
+    html += '<div class="field-row">' +
+            '<div><label>Multas (R$)</label><input type="number" step="0.01" id="mat-mult" value="0"/></div>' +
+            '<div><label>Parcelas</label><input type="number" step="1" min="1" max="12" id="mat-parc" value="1"/></div></div>';
+
+    html += '<div class="field-row single"><div><label>Área de piscina (m²) — em branco oculta a linha</label><input type="number" step="0.01" id="mat-pisc" value="' + (pisc > 0 ? pisc : "") + '"/></div></div>';
+
+    html += '<div class="modal-actions">' +
+            '<button class="btn ghost" id="mat-cancel">Cancelar</button>' +
+            '<button class="btn" id="mat-go">Gerar PDF</button></div>';
+    html += '</div></div>';
+    document.body.insertAdjacentHTML("beforeend", html);
+
+    $("mat-cancel").onclick = function () { document.getElementById("modal-bg").remove(); };
+    $("mat-go").onclick = function () {
+      try {
+        var nome  = $("mat-nome").value.trim() || "Cliente";
+        var area  = parseFloat($("mat-area").value) || 0;
+        var cheio = parseFloat($("mat-cheio").value) || 0;
+        var red   = parseFloat($("mat-red").value)   || 0;
+        var mult  = parseFloat($("mat-mult").value)  || 0;
+        var parc  = parseInt($("mat-parc").value, 10) || 1;
+        var piscI = $("mat-pisc").value;
+        var pisc  = piscI === "" || piscI == null ? 0 : (parseFloat(piscI) || 0);
+
+        var total = red + mult;
+        var econ  = cheio > 0 ? Math.round(((cheio - red) / cheio) * 100) : 0;
+
+        var dest = String(lead.dest || "");
+        if (dest.indexOf("Residencial") === 0) dest = "Residencial";
+        else if (dest.indexOf("Comercial") === 0) dest = "Comercial";
+        else if (dest.indexOf("Galp") === 0) dest = "Galpão Industrial";
+
+        var fmtBRL = function (v) { return "R$ " + Number(v || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }); };
+        var fmtArea = function (v) { return (Number(v || 0).toLocaleString("pt-BR", { maximumFractionDigits: 2 })) + "m²"; };
+
+        var cfg = state.serverConfig || {};
+        var emailEmp = cfg.email_empresa || "contato@impostoeobra.com.br";
+        var whatEmp  = cfg.whatsapp_empresa ? formatWhatsappE164(cfg.whatsapp_empresa) : "+55 (61) 9 9398-2653";
+        var endEmp   = cfg.endereco_empresa || "Rua Pais Leme 215, Conj. 1713, Pinheiros-SP.";
+
+        var dados = {
+          responsavel:      lead.resp || "—",
+          destinacao:       dest || "—",
+          tipo_obra:        lead.tipo || "—",
+          concreto:         lead.concreto || "—",
+          area_constr:      fmtArea(area),
+          area_piscina:     pisc > 0 ? fmtArea(pisc) : "0m²",
+          imposto_cheio:    fmtBRL(cheio),
+          imposto_reduzido: fmtBRL(red),
+          multas:           fmtBRL(mult),
+          total:            fmtBRL(total),
+          parcelas:         parc > 1
+                              ? "parcelamento em até " + parc + "x de " + fmtBRL(total / parc)
+                              : "pagamento à vista",
+          economia_pct:     econ + "%",
+          email:            emailEmp,
+          whatsapp_contato: whatEmp,
+          endereco:         endEmp
+        };
+
+        var json = JSON.stringify(dados);
+        var b64;
+        try { b64 = btoa(unescape(encodeURIComponent(json))); }
+        catch (_) { b64 = encodeURIComponent(json); }
+
+        var url = "./material-apoio.html#data=" + b64;
+        window.open(url, "_blank", "noopener");
+
+        // registra atividade na timeline
+        try {
+          api.call("atividades.create", {
+            ref_tipo: "lead", ref_id: lead.id,
+            tipo: "material_apoio",
+            descricao: "Material de Apoio gerado para " + nome + " (econ. " + econ + "%, total " + fmtBRL(total) + ")"
+          });
+        } catch (_) {}
+
+        document.getElementById("modal-bg").remove();
+        toast("Material de Apoio aberto em nova aba.", "success");
+      } catch (e) {
+        toast("Erro: " + (e.message || e), "error");
+      }
+    };
+  }
+};
+
+// helper compartilhado: formata "55619..." -> "+55 (61) 9 ..."
+function formatWhatsappE164(raw) {
+  var s = String(raw || "").replace(/\D/g, "");
+  if (s.length < 12) return raw;
+  var cc = s.substring(0, 2);
+  var ddd = s.substring(2, 4);
+  var rest = s.substring(4);
+  var first = rest.substring(0, rest.length - 8);
+  var mid = rest.substring(rest.length - 8, rest.length - 4);
+  var last = rest.substring(rest.length - 4);
+  return "+" + cc + " (" + ddd + ") " + first + " " + mid + "-" + last;
+}
 
 // Hook no afterLogin: inicia polling e carrega leads
 var _origAfterLogin = auth.afterLogin;
@@ -1564,148 +1690,138 @@ var dashboardView = {
 
   carregar: async function (de) {
     try {
-      var data = await api.call("dashboard.kpis", { de: de });
-      $("dash-status").textContent = "Atualizado " + nowTxt();
-      dashboardView.draw(data);
+      var d = await api.call("dashboard.kpis", { de: de });
+
+      var fmtBRL = function (v) {
+        var n = parseFloat(v) || 0;
+        return "R$ " + n.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      };
+      var fmtBRLcompact = function (v) {
+        var n = parseFloat(v) || 0;
+        if (n >= 1000000) return "R$ " + (n / 1000000).toFixed(1).replace(".", ",") + "M";
+        if (n >= 1000)    return "R$ " + (n / 1000).toFixed(1).replace(".", ",") + "k";
+        return "R$ " + n.toLocaleString("pt-BR", { maximumFractionDigits: 0 });
+      };
+
+      var c = d.cards || {};
+      var aReceber = (parseFloat(c.total_vendido) || 0) - (parseFloat(c.total_pago) || 0);
+
+      var cardsHtml = '<div class="dash-cards">' +
+        '<div class="dash-card"><div class="dash-card-lbl">Leads</div><div class="dash-card-val">' + (c.total_leads || 0) + '</div></div>' +
+        '<div class="dash-card"><div class="dash-card-lbl">Propostas Enviadas</div><div class="dash-card-val">' + (c.propostas || 0) + '</div></div>' +
+        '<div class="dash-card"><div class="dash-card-lbl">Fechados Ganhos</div><div class="dash-card-val">' + (c.ganhos || 0) + '</div>' +
+          '<div class="dash-card-sub">' + (c.taxa_conversao || 0) + '% conversão</div></div>' +
+        '<div class="dash-card"><div class="dash-card-lbl">Perdidos / Sem retorno</div><div class="dash-card-val">' + (c.perdidos || 0) + '</div></div>' +
+        '<div class="dash-card"><div class="dash-card-lbl">Ticket Médio</div><div class="dash-card-val">' + fmtBRLcompact(c.ticket_medio) + '</div></div>' +
+        '<div class="dash-card"><div class="dash-card-lbl">Total Vendido</div><div class="dash-card-val">' + fmtBRLcompact(c.total_vendido) + '</div>' +
+          '<div class="dash-card-sub">' + (c.contratos_ativos || 0) + ' contratos</div></div>' +
+        '<div class="dash-card"><div class="dash-card-lbl">Total Pago</div><div class="dash-card-val">' + fmtBRLcompact(c.total_pago) + '</div></div>' +
+        '<div class="dash-card"><div class="dash-card-lbl">A Receber</div><div class="dash-card-val">' + fmtBRLcompact(aReceber) + '</div></div>' +
+        '</div>';
+
+      var chartsHtml = '<div class="dash-charts">' +
+        '<div class="dash-chart"><h4>Funil Comercial</h4><canvas id="ch-funil"></canvas></div>' +
+        '<div class="dash-chart"><h4>Leads por Mês</h4><canvas id="ch-mes"></canvas></div>' +
+        '<div class="dash-chart"><h4>Por Estado (UF)</h4><canvas id="ch-uf"></canvas></div>' +
+        '<div class="dash-chart"><h4>Por Produto</h4><canvas id="ch-prod"></canvas></div>' +
+        '<div class="dash-chart"><h4>Origem dos Leads</h4><canvas id="ch-orig"></canvas></div>' +
+        '<div class="dash-chart"><h4>Conversão por Mês</h4><canvas id="ch-conv"></canvas></div>' +
+        '</div>';
+
+      $("dash-content").innerHTML = cardsHtml + chartsHtml;
+      $("dash-status").textContent = "Atualizado " + new Date().toLocaleTimeString("pt-BR").substring(0, 5);
+
+      // destrói gráficos antigos antes de redesenhar
+      Object.keys(dashboardView.charts).forEach(function (k) {
+        try { dashboardView.charts[k].destroy(); } catch (_) {}
+      });
+      dashboardView.charts = {};
+
+      if (typeof Chart === "undefined") {
+        console.warn("Chart.js não carregado");
+        return;
+      }
+
+      // Funil (barras horizontais)
+      var fnl = d.funil || [];
+      dashboardView.charts.funil = new Chart($("ch-funil"), {
+        type: "bar",
+        data: {
+          labels: fnl.map(function (x) { return x.status; }),
+          datasets: [{ label: "Leads", data: fnl.map(function (x) { return x.count; }), backgroundColor: "#0071E3" }]
+        },
+        options: { indexAxis: "y", plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true, ticks: { precision: 0 } } } }
+      });
+
+      // Leads por mês (linha)
+      var pm = d.por_mes || {};
+      var meses = Object.keys(pm).sort();
+      dashboardView.charts.mes = new Chart($("ch-mes"), {
+        type: "line",
+        data: {
+          labels: meses,
+          datasets: [{ label: "Leads", data: meses.map(function (m) { return pm[m].leads; }),
+                       borderColor: "#0071E3", backgroundColor: "rgba(0,113,227,.12)", tension: 0.3, fill: true }]
+        },
+        options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
+      });
+
+      // Por UF (top 12 — barras)
+      var uf = d.por_uf || {};
+      var ufKeys = Object.keys(uf).sort(function (a, b) { return uf[b] - uf[a]; }).slice(0, 12);
+      dashboardView.charts.uf = new Chart($("ch-uf"), {
+        type: "bar",
+        data: {
+          labels: ufKeys,
+          datasets: [{ label: "Leads", data: ufKeys.map(function (k) { return uf[k]; }), backgroundColor: "#006AE0" }]
+        },
+        options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
+      });
+
+      // Por produto (donut)
+      var pp = d.por_produto || {};
+      var ppK = Object.keys(pp);
+      dashboardView.charts.prod = new Chart($("ch-prod"), {
+        type: "doughnut",
+        data: {
+          labels: ppK,
+          datasets: [{ data: ppK.map(function (k) { return pp[k]; }),
+                       backgroundColor: ["#0071E3", "#FFD439", "#16a34a", "#ef4444", "#a855f7", "#06b6d4"] }]
+        },
+        options: { plugins: { legend: { position: "bottom" } } }
+      });
+
+      // Origem (donut)
+      var po = d.por_origem || {};
+      var poK = Object.keys(po);
+      dashboardView.charts.orig = new Chart($("ch-orig"), {
+        type: "doughnut",
+        data: {
+          labels: poK,
+          datasets: [{ data: poK.map(function (k) { return po[k]; }),
+                       backgroundColor: ["#0071E3", "#FFD439", "#64748b", "#16a34a", "#ef4444"] }]
+        },
+        options: { plugins: { legend: { position: "bottom" } } }
+      });
+
+      // Conversão por mês (barras pareadas)
+      dashboardView.charts.conv = new Chart($("ch-conv"), {
+        type: "bar",
+        data: {
+          labels: meses,
+          datasets: [
+            { label: "Leads", data: meses.map(function (m) { return pm[m].leads; }),  backgroundColor: "#0071E3" },
+            { label: "Ganhos", data: meses.map(function (m) { return pm[m].ganhos; }), backgroundColor: "#16a34a" }
+          ]
+        },
+        options: { scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
+      });
+
     } catch (e) {
-      $("dash-content").innerHTML = '<div class="placeholder"><h2>Erro</h2><p>' + escapeHtml(e.message || e) + '</p></div>';
+      $("dash-status").textContent = "Erro: " + (e.message || e);
+      console.error(e);
     }
-  },
-
-  draw: function (d) {
-    var c = d.cards;
-    var html = '<div class="kpi-grid">';
-    html += '<div class="kpi-card primary"><div class="lbl">Leads</div><div class="val">' + c.total_leads + '</div><div class="sub">no período</div></div>';
-    html += '<div class="kpi-card warning"><div class="lbl">Propostas Enviadas</div><div class="val">' + c.propostas + '</div></div>';
-    html += '<div class="kpi-card success"><div class="lbl">Fechados Ganhos</div><div class="val">' + c.ganhos + '</div><div class="sub">' + c.taxa_conversao + '% de conversão</div></div>';
-    html += '<div class="kpi-card danger"><div class="lbl">Perdidos / Sem retorno</div><div class="val">' + c.perdidos + '</div></div>';
-    html += '<div class="kpi-card"><div class="lbl">Ticket Médio</div><div class="val">' + fmtBRLcompact(c.ticket_medio) + '</div></div>';
-    html += '<div class="kpi-card success"><div class="lbl">Total Vendido</div><div class="val">' + fmtBRLcompact(c.total_vendido) + '</div><div class="sub">' + c.contratos_ativos + ' contratos ativos</div></div>';
-    html += '<div class="kpi-card primary"><div class="lbl">Total Pago</div><div class="val">' + fmtBRLcompact(c.total_pago) + '</div></div>';
-    var saldo = c.total_vendido - c.total_pago;
-    html += '<div class="kpi-card warning"><div class="lbl">A receber</div><div class="val">' + fmtBRLcompact(saldo) + '</div></div>';
-    html += '</div>';
-
-    html += '<div class="chart-grid">';
-    html += '<div class="chart-card"><h3>Funil Comercial</h3><canvas id="ch-funil"></canvas></div>';
-    html += '<div class="chart-card"><h3>Leads por Mês</h3><canvas id="ch-mes"></canvas></div>';
-    html += '<div class="chart-card"><h3>Por Estado (UF)</h3><canvas id="ch-uf"></canvas></div>';
-    html += '<div class="chart-card"><h3>Por Produto</h3><canvas id="ch-prod"></canvas></div>';
-    html += '</div>';
-
-    html += '<div class="chart-grid" style="margin-top:14px;">';
-    html += '<div class="chart-card"><h3>Origem dos Leads</h3><canvas id="ch-origem"></canvas></div>';
-    html += '<div class="chart-card"><h3>Conversão por Mês</h3><canvas id="ch-conv"></canvas></div>';
-    html += '</div>';
-
-    $("dash-content").innerHTML = html;
-
-    Object.keys(dashboardView.charts).forEach(function (k) {
-      try { dashboardView.charts[k].destroy(); } catch (_) {}
-    });
-    dashboardView.charts = {};
-
-    if (!window.Chart) {
-      $("dash-content").insertAdjacentHTML("beforeend",
-        '<div class="placeholder">Chart.js não carregou.</div>');
-      return;
-    }
-
-    dashboardView.charts.funil = new Chart($("ch-funil"), {
-      type: "bar",
-      data: {
-        labels: d.funil.map(function (f) { return f.status; }),
-        datasets: [{
-          label: "Leads",
-          data: d.funil.map(function (f) { return f.count; }),
-          backgroundColor: ["#0071E3","#3b82f6","#6366f1","#a855f7","#ec4899","#16a34a","#dc2626","#64748b"],
-        }]
-      },
-      options: { indexAxis: "y", plugins: { legend: { display: false } }, responsive: true, maintainAspectRatio: false }
-    });
-
-    var mesesKeys = Object.keys(d.por_mes).sort();
-    dashboardView.charts.mes = new Chart($("ch-mes"), {
-      type: "line",
-      data: {
-        labels: mesesKeys,
-        datasets: [{
-          label: "Leads",
-          data: mesesKeys.map(function (k) { return d.por_mes[k].leads; }),
-          borderColor: "#0071E3",
-          backgroundColor: "rgba(0,113,227,.1)",
-          tension: 0.3,
-          fill: true,
-        }]
-      },
-      options: { plugins: { legend: { display: false } }, responsive: true, maintainAspectRatio: false }
-    });
-
-    var ufKeys = Object.keys(d.por_uf).sort(function (a, b) { return d.por_uf[b] - d.por_uf[a]; }).slice(0, 12);
-    dashboardView.charts.uf = new Chart($("ch-uf"), {
-      type: "bar",
-      data: {
-        labels: ufKeys,
-        datasets: [{
-          label: "Leads",
-          data: ufKeys.map(function (u) { return d.por_uf[u]; }),
-          backgroundColor: "#3AB97A",
-        }]
-      },
-      options: { plugins: { legend: { display: false } }, responsive: true, maintainAspectRatio: false }
-    });
-
-    var prodKeys = Object.keys(d.por_produto);
-    dashboardView.charts.prod = new Chart($("ch-prod"), {
-      type: "doughnut",
-      data: {
-        labels: prodKeys,
-        datasets: [{
-          data: prodKeys.map(function (p) { return d.por_produto[p]; }),
-          backgroundColor: ["#0071E3","#FFD439","#3AB97A","#a855f7","#ec4899"],
-        }]
-      },
-      options: { responsive: true, maintainAspectRatio: false }
-    });
-
-    var origKeys = Object.keys(d.por_origem);
-    dashboardView.charts.origem = new Chart($("ch-origem"), {
-      type: "doughnut",
-      data: {
-        labels: origKeys,
-        datasets: [{
-          data: origKeys.map(function (o) { return d.por_origem[o]; }),
-          backgroundColor: ["#0071E3","#FFD439","#3AB97A","#a855f7"],
-        }]
-      },
-      options: { responsive: true, maintainAspectRatio: false }
-    });
-
-    dashboardView.charts.conv = new Chart($("ch-conv"), {
-      type: "bar",
-      data: {
-        labels: mesesKeys,
-        datasets: [
-          { label: "Leads", data: mesesKeys.map(function (k) { return d.por_mes[k].leads; }), backgroundColor: "#3b82f6" },
-          { label: "Ganhos", data: mesesKeys.map(function (k) { return d.por_mes[k].ganhos; }), backgroundColor: "#16a34a" },
-        ]
-      },
-      options: { plugins: { legend: { position: "bottom" } }, responsive: true, maintainAspectRatio: false }
-    });
   }
-};
-
-function fmtBRLcompact(v) {
-  v = parseFloat(v) || 0;
-  if (v >= 1000000) return "R$ " + (v / 1000000).toFixed(2).replace(".", ",") + " mi";
-  if (v >= 1000) return "R$ " + (v / 1000).toFixed(1).replace(".", ",") + "k";
-  return "R$ " + v.toFixed(2).replace(".", ",");
-}
-
-var _afterLoginPrev = auth.afterLogin;
-auth.afterLogin = function () {
-  _afterLoginPrev();
-  setTimeout(function () { clientesStore.refresh(true); clientesStore.startPolling(); }, 800);
 };
 
 })();
